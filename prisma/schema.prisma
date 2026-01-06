@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================
+// 1. STORE & PRODUCTS
+// ==============================
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  series      String   // e.g. "HydroPro"
+  description String   @db.Text
+  basePrice   Int
+  stock       Int      @default(0)
+  capacity    String?
+  sales       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  features    Feature[]
+  images      Image[]
+  variants    Variant[]
+  orderItems  OrderItem[]
+}
+
+model Variant {
+  id        String  @id @default(uuid())
+  name      String  // e.g. "Matte Black"
+  capacity  String? // e.g. "500ml"
+  stock     Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Image {
+  id        String  @id @default(uuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Feature {
+  id        String  @id @default(uuid())
+  text      String
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ==============================
+// 2. AUTHENTICATION (NextAuth)
+// ==============================
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER") // "ADMIN" or "USER"
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]   // A user can have many orders
+}
+
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==============================
+// 3. ORDERS & CART
+// ==============================
+
+model Order {
+  id          String      @id @default(uuid())
+  userId      String?     // Nullable because guest checkout might happen
+  total       Int
+  status      String      @default("PENDING") // PENDING, PAID, SHIPPED
+  createdAt   DateTime    @default(now())
+  
+  // Address Details
+  customerName  String
+  customerEmail String
+  address       String    @db.Text
+  
+  user        User?       @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  price       Int     // Price at time of purchase
+  variantName String? // Which color/size they bought
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
