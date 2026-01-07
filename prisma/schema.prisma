@@ -12,16 +12,16 @@ datasource db {
 // ==============================
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   name        String
-  series      String   // e.g. "HydroPro"
-  description String   @db.Text
+  series      String      // e.g. "HydroPro"
+  description String      @db.Text
   basePrice   Int
-  stock       Int      @default(0)
+  stock       Int         @default(0)
   capacity    String?
-  sales       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sales       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   features    Feature[]
   images      Image[]
@@ -57,19 +57,20 @@ model Feature {
 // ==============================
 
 model User {
-  id            String    @id @default(uuid())
+  id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
   emailVerified DateTime?
   image         String?
   role          String    @default("USER") // "ADMIN" or "USER"
+  
   accounts      Account[]
   sessions      Session[]
-  orders        Order[]   // A user can have many orders
+  orders        Order[]   // Links user to their purchase history
 }
 
 model Account {
-  id                 String  @id @default(uuid())
+  id                 String  @id @default(cuid())
   userId             String
   type               String
   provider           String
@@ -88,11 +89,19 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 // ==============================
@@ -100,19 +109,19 @@ model Session {
 // ==============================
 
 model Order {
-  id          String      @id @default(uuid())
-  userId      String?     // Nullable because guest checkout might happen
-  total       Int
-  status      String      @default("PENDING") // PENDING, PAID, SHIPPED
-  createdAt   DateTime    @default(now())
+  id            String      @id @default(uuid())
+  userId        String?     // Nullable for guest checkout
+  total         Int
+  status        String      @default("PENDING") // PENDING, PAID, SHIPPED
+  createdAt     DateTime    @default(now())
   
   // Address Details
   customerName  String
   customerEmail String
-  address       String    @db.Text
+  address       String      @db.Text
   
-  user        User?       @relation(fields: [userId], references: [id])
-  items       OrderItem[]
+  user          User?       @relation(fields: [userId], references: [id])
+  items         OrderItem[]
 }
 
 model OrderItem {
@@ -121,7 +130,7 @@ model OrderItem {
   productId   String
   quantity    Int
   price       Int     // Price at time of purchase
-  variantName String? // Which color/size they bought
+  variantName String? // e.g. "Matte Black"
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
