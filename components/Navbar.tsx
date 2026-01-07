@@ -8,6 +8,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,7 +17,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   // Temporary: Change this to false to test "Guest" view once we have Auth
-  const isLoggedIn = true; 
+  const { data: session } = useSession(); 
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 50);
@@ -101,11 +102,11 @@ export default function Navbar() {
               
               {/* UPDATED: User Icon Logic */}
               <Link 
-                href={isLoggedIn ? "/dashboard" : "/sign-in"} 
-                className="group hover:text-white transition-colors"
-              >
-                <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              </Link>
+  href={session ? "/dashboard" : "/sign-in"} 
+  className="group hover:text-white transition-colors"
+>
+  <User className={`w-5 h-5 group-hover:scale-110 transition-transform ${session ? "text-green-400" : ""}`} />
+</Link>
               
               {/* UPDATED: Cart Icon Wrapped in Link */}
               <Link href="/cart" className="relative cursor-pointer group hover:text-white transition-colors">
@@ -154,13 +155,15 @@ export default function Navbar() {
               {/* UPDATED: Mobile Account & Cart Links */}
               <div className="mt-8 grid grid-cols-2 gap-4">
                 <Link 
-                  href={isLoggedIn ? "/dashboard" : "/sign-in"}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex flex-col items-center justify-center bg-[#133159] p-6 rounded-lg text-[#C9D1D9]"
-                >
-                  <User className="w-6 h-6 mb-2" />
-                  <span className="text-sm tracking-widest">ACCOUNT</span>
-                </Link>
+  href={session ? "/dashboard" : "/sign-in"}
+  onClick={() => setMobileMenuOpen(false)}
+  className="flex flex-col items-center justify-center bg-[#133159] p-6 rounded-lg text-[#C9D1D9]"
+>
+  <User className="w-6 h-6 mb-2" />
+  <span className="text-sm tracking-widest">
+    {session ? "ACCOUNT" : "LOGIN"}
+  </span>
+</Link>
                 
                 <Link 
                   href="/cart"
