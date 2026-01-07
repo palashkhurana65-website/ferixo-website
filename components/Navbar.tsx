@@ -100,7 +100,7 @@ export default function Navbar() {
               
               {/* UPDATED: User Icon Logic */}
               <Link 
-                href={isLoggedIn ? "/dashboard" : "/sign-in"} 
+                href={isLoggedIn ? "/sign-in" : "/sign-in"} 
                 className="group hover:text-white transition-colors"
               >
                 <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
