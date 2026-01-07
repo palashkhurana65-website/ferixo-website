@@ -6,6 +6,7 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-
 import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -100,7 +101,7 @@ export default function Navbar() {
               
               {/* UPDATED: User Icon Logic */}
               <Link 
-                href={isLoggedIn ? "/sign-in" : "/sign-in"} 
+                href={isLoggedIn ? "/dashboard" : "/sign-in"} 
                 className="group hover:text-white transition-colors"
               >
                 <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
