@@ -15,15 +15,15 @@ const handler = NextAuth({
   ],
   callbacks: {
     async session({ session, user }) {
-      if (session.user) {
-        // Add the user's ID to the session so we can use it later
-        session.user.id = user.id;
+      if (session?.user) {
+        // FIX: Cast to 'any' to fix the TypeScript build error
+        (session.user as any).id = user.id;
       }
       return session;
     },
   },
   pages: {
-    signIn: '/sign-in', // Use our custom page, not the default one
+    signIn: '/sign-in', 
   },
 });
 
