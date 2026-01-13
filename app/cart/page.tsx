@@ -1,66 +1,31 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, X, ArrowRight, ShoppingBag } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { useState } from "react";
-
-// --- DUMMY DATA (Updated for INR) ---
-const INITIAL_CART = [
-  {
-    id: 1,
-    name: "Obsidian Pro Tumbler",
-    variant: "Matte Black",
-    price: 1299.00, // Realistic INR price
-    quantity: 1,
-    image: "/product-1.jpg", 
-  },
-  {
-    id: 2,
-    name: "Nomad Shoe Rack",
-    variant: "3-Tier / Industrial Grey",
-    price: 4999.00, // Realistic INR price
-    quantity: 2,
-    image: "/product-2.jpg",
-  },
-];
+import { useStore } from "@/context/StoreContext"; // Import the Global Store
+import Image from "next/image";
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState(INITIAL_CART);
+  // Use Global State
+  const { cart, removeFromCart, updateCartQuantity } = useStore();
 
-  // Simple calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = 99.00; // Realistic shipping cost
+  // Calculate Totals Dynamically
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const shipping = cart.length > 0 ? 99.00 : 0;
   const total = subtotal + shipping;
 
-  // Helper to format Rupees (e.g. 1,200.00)
+  // Helper to format Rupees
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0, // Removes decimals like .00 for cleaner look
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
-  // Handler to remove item
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
-  };
-
-  // Handler to update quantity
-  const updateQuantity = (id: number, change: number) => {
-    setCartItems(cartItems.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(1, item.quantity + change);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }));
-  };
-
   // --- EMPTY STATE ---
-  if (cartItems.length === 0) {
+  if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-[#0A1A2F] pt-32 pb-20 px-6 flex flex-col items-center justify-center text-center">
         <div className="w-20 h-20 bg-[#133159] rounded-full flex items-center justify-center mb-6">
@@ -86,69 +51,78 @@ export default function CartPage() {
         
         <Breadcrumbs items={[{ label: "Shopping Cart", href: "/cart" }]} />
 
-        <h1 className="text-4xl font-bold text-white mb-12">Your Cart ({cartItems.length})</h1>
+        <h1 className="text-4xl font-bold text-white mb-12">Your Cart ({cart.length})</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-20">
           
           {/* --- LEFT: CART ITEMS LIST --- */}
           <div className="lg:col-span-2 space-y-8">
-            {cartItems.map((item) => (
-              <div 
-                key={item.id} 
-                className="flex gap-6 py-8 border-b border-[#C9D1D9]/10"
-              >
-                {/* Product Image */}
-                <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-[#133159] rounded-lg overflow-hidden flex-shrink-0">
-                  <div className="absolute inset-0 flex items-center justify-center text-[#C9D1D9]/20 font-bold">
-                    IMG
-                  </div>
-                </div>
-
-                {/* Product Details */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-xl font-bold text-white">{item.name}</h3>
-                      <p className="text-lg text-white font-light">
-                        {formatPrice(item.price)}
-                      </p>
-                    </div>
-                    <p className="text-[#C9D1D9] text-sm mt-1">{item.variant}</p>
+            {cart.map((item) => {
+              // Create a unique key for the map loop
+              const uniqueId = `${item.id}-${item.variant}`;
+              
+              return (
+                <div key={uniqueId} className="flex gap-6 py-8 border-b border-[#C9D1D9]/10">
+                  {/* Product Image */}
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-[#133159] rounded-lg overflow-hidden flex-shrink-0 border border-white/5">
+                    {item.image ? (
+                        <Image 
+                          src={item.image} 
+                          alt={item.name} 
+                          fill 
+                          className="object-cover" 
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/20">No Img</div>
+                    )}
                   </div>
 
-                  {/* Controls */}
-                  <div className="flex justify-between items-end mt-4">
-                    
-                    {/* Quantity */}
-                    <div className="flex items-center border border-[#C9D1D9]/30 rounded-lg">
-                      <button 
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="p-2 hover:text-white text-[#C9D1D9] transition-colors"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="w-8 text-center text-[#C9D1D9] text-sm font-medium">
-                        {item.quantity}
-                      </span>
-                      <button 
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="p-2 hover:text-white text-[#C9D1D9] transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
+                  {/* Product Details */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-bold text-white">{item.name}</h3>
+                        <p className="text-lg text-white font-light">
+                          {formatPrice(item.price)}
+                        </p>
+                      </div>
+                      <p className="text-[#C9D1D9] text-sm mt-1">Variant: {item.variant}</p>
                     </div>
 
-                    {/* Remove */}
-                    <button 
-                      onClick={() => removeItem(item.id)}
-                      className="text-[#C9D1D9]/60 hover:text-red-400 text-sm flex items-center gap-1 transition-colors underline decoration-transparent hover:decoration-red-400 underline-offset-4"
-                    >
-                      <X className="w-4 h-4" /> Remove
-                    </button>
+                    {/* Controls */}
+                    <div className="flex justify-between items-end mt-4">
+                      
+                      {/* Quantity */}
+                      <div className="flex items-center border border-[#C9D1D9]/30 rounded-lg">
+                        <button 
+                          onClick={() => updateCartQuantity(uniqueId, -1)}
+                          className="p-2 hover:text-white text-[#C9D1D9] transition-colors"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center text-[#C9D1D9] text-sm font-medium">
+                          {item.quantity}
+                        </span>
+                        <button 
+                          onClick={() => updateCartQuantity(uniqueId, 1)}
+                          className="p-2 hover:text-white text-[#C9D1D9] transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Remove */}
+                      <button 
+                        onClick={() => removeFromCart(uniqueId)}
+                        className="text-[#C9D1D9]/60 hover:text-red-400 text-sm flex items-center gap-1 transition-colors underline decoration-transparent hover:decoration-red-400 underline-offset-4"
+                      >
+                        <X className="w-4 h-4" /> Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* --- RIGHT: ORDER SUMMARY --- */}
@@ -166,7 +140,6 @@ export default function CartPage() {
                   <span>{formatPrice(shipping)}</span>
                 </div>
                 
-                {/* Coupon Code Input Placeholder */}
                 <div className="pt-4">
                   <div className="flex gap-2">
                     <input 

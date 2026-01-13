@@ -1,25 +1,27 @@
 "use client";
 
-import { products, seriesList, Product } from "@/lib/data";
+import { seriesList } from "@/lib/data"; 
 import { FadeIn } from "@/components/ui/Motion";
-import { ArrowLeft, Save, Plus, X, Image as ImageIcon, UploadCloud } from "lucide-react";
+import { ArrowLeft, Save, X, Image as ImageIcon, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useStore } from "@/context/StoreContext";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
 
-export default function ProductEditor({ params }: PageProps) {
-  const { products, addProduct, updateProduct } = useStore();
+export default function ProductEditor() { 
+  // 1. Get parameters safely
+  const params = useParams(); 
   const router = useRouter();
+  
+  // State
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null); // New Error State
   const [isNewMode, setIsNewMode] = useState(false);
+  const [isCustomSeries, setIsCustomSeries] = useState(false);
 
-  // 1. INITIAL FORM STATE
-  const [formData, setFormData] = useState<Partial<Product>>({
+  // Form State
+  const [formData, setFormData] = useState<any>({
     name: "",
     series: "HydroPro",
     description: "",
@@ -28,90 +30,126 @@ export default function ProductEditor({ params }: PageProps) {
     capacity: "", 
     images: [""], 
     features: [""],
-    // UPDATED: Variants now include capacity
     variants: [{ name: "", capacity: "", stock: 0 }] 
   });
 
-  // 2. LOAD DATA
+  // 2. DATA FETCHING EFFECT
   useEffect(() => {
-    params.then((resolved) => {
-      if (resolved.id === "new") {
+    const fetchProductData = async () => {
+      const id = params?.id; 
+      
+      // If no ID yet, wait.
+      if (!id) return;
+
+      console.log("Admin Editor: Fetching ID ->", id);
+
+      // CASE A: Create New
+      if (id === "new") {
         setIsNewMode(true);
-        setFormData({
-          ...formData,
-          name: "New Product",
-          series: "HydroPro",
-          images: ["/images/placeholder.jpg"],
-          capacity: "500ml"
-        });
-      } else {
-        // CHANGED: This now looks inside the 'products' from useStore()
-        const found = products.find(p => p.id === resolved.id);
-        if (found) {
-          setFormData(found);
-        }
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    });
-  }, [params, products]); // <--- IMPORTANT: Add 'products' here
+
+      // CASE B: Edit Existing
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        
+        console.log("Admin Editor: API Response Status ->", res.status);
+
+        if (!res.ok) {
+            // Throw specific error to be caught below
+            if (res.status === 404) throw new Error(`Product with ID '${id}' not found in database.`);
+            throw new Error(`API Error: ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log("Admin Editor: Data Received ->", data);
+        
+        // Populate Form
+        setFormData({
+            ...data,
+            images: data.images && data.images.length > 0 ? data.images : [""],
+            features: data.features && data.features.length > 0 ? data.features : [""],
+            variants: data.variants && data.variants.length > 0 ? data.variants : [{ name: "", capacity: "", stock: 0 }]
+        });
+      } catch (err: any) {
+        console.error("Fetch Error:", err);
+        setError(err.message); // Set visible error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductData();
+  }, [params?.id]);
+
 
   // 3. HANDLERS
-  const handleSave = () => {
-    // Calculate total stock from variants
-    const totalVariantStock = formData.variants?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
-    
-    // Prepare the final product object
-    const productToSave = { ...formData, stock: totalVariantStock } as Product;
+  const handleSave = async () => {
+    // Recalculate stock from variants before saving
+    const totalVariantStock = formData.variants?.reduce((acc: number, v: any) => acc + (Number(v.stock) || 0), 0) || 0;
+    const payload = { ...formData, stock: totalVariantStock };
 
-    if (isNewMode) {
-      // Create new
-      addProduct(productToSave); 
-      alert("Product Created Successfully!");
-    } else {
-      // Update existing
-      if (formData.id) {
-        updateProduct(formData.id, productToSave);
-        alert("Product Updated Successfully!");
-      }
+    try {
+      const url = isNewMode ? '/api/products' : `/api/products/${params?.id}`;
+      const method = isNewMode ? 'POST' : 'PUT';
+
+      const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Save operation failed");
+      
+      alert(isNewMode ? "Product Created!" : "Product Updated!");
+      router.push("/admin/products");
+    } catch (error) {
+       console.error(error);
+       alert("Error saving product. Check console.");
     }
-
-    router.push("/admin/products");
   };
-
-  const handleArrayChange = (field: 'images' | 'features', index: number, value: string) => {
+  
+  // Array Helper Functions
+  const handleArrayChange = (field: string, index: number, value: string) => {
     const newArray = [...(formData[field] || [])];
     newArray[index] = value;
     setFormData({ ...formData, [field]: newArray });
   };
-
-  const addArrayItem = (field: 'images' | 'features') => {
+  const addArrayItem = (field: string) => {
     setFormData({ ...formData, [field]: [...(formData[field] || []), ""] });
   };
-
-  const removeArrayItem = (field: 'images' | 'features', index: number) => {
+  const removeArrayItem = (field: string, index: number) => {
     const newArray = [...(formData[field] || [])];
     newArray.splice(index, 1);
     setFormData({ ...formData, [field]: newArray });
   };
-
-  // UPDATED HANDLER: Now accepts 'capacity'
-  const handleVariantChange = (index: number, field: 'name' | 'stock' | 'capacity', value: string | number) => {
+  const handleVariantChange = (index: number, field: string, value: string | number) => {
     const newVariants = [...(formData.variants || [])];
     newVariants[index] = { ...newVariants[index], [field]: value };
     setFormData({ ...formData, variants: newVariants });
   };
-
   const addVariant = () => {
     setFormData({ ...formData, variants: [...(formData.variants || []), { name: "", capacity: "", stock: 0 }] });
   };
-
   const removeVariant = (index: number) => {
     const newVariants = [...(formData.variants || [])];
     newVariants.splice(index, 1);
     setFormData({ ...formData, variants: newVariants });
   };
 
-  if (loading) return <div className="p-10 text-white">Loading Editor...</div>;
+  // 4. CONDITIONAL RENDERING
+  if (loading) return <div className="p-10 text-white text-center">Loading Editor...</div>;
+  
+  if (error) return (
+      <div className="p-20 text-center">
+          <h2 className="text-2xl text-red-500 font-bold mb-4">Error Loading Product</h2>
+          <p className="text-white mb-6">{error}</p>
+          <Link href="/admin/products" className="bg-white/10 px-4 py-2 rounded text-white hover:bg-white/20">
+              Go Back to List
+          </Link>
+      </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
@@ -127,7 +165,7 @@ export default function ProductEditor({ params }: PageProps) {
               {isNewMode ? "Add New Product" : "Edit Product"}
             </h1>
             <p className="text-xs text-[#C9D1D9] uppercase tracking-wider">
-              {isNewMode ? "Create a new listing" : `ID: ${formData.id || 'N/A'}`}
+              {isNewMode ? "Create a new listing" : `ID: ${params?.id}`}
             </p>
           </div>
         </div>
@@ -161,15 +199,52 @@ export default function ProductEditor({ params }: PageProps) {
                         />
                     </div>
                     
+                    {/* SERIES SELECTOR */}
                     <div>
-                        <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">Series</label>
-                        <select 
-                            className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white outline-none"
+                      <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">
+                        Series
+                      </label>
+                      {!isCustomSeries ? (
+                        <div className="relative">
+                          <select
+                            className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white outline-none appearance-none cursor-pointer focus:border-white/50 transition-colors"
                             value={formData.series}
-                            onChange={(e) => setFormData({...formData, series: e.target.value as any})}
-                        >
-                            {seriesList.map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
-                        </select>
+                            onChange={(e) => {
+                              if (e.target.value === "custom_new_entry") {
+                                setIsCustomSeries(true);
+                                setFormData({ ...formData, series: "" });
+                              } else {
+                                setFormData({ ...formData, series: e.target.value });
+                              }
+                            }}
+                          >
+                            <option value="" disabled>Select a Series</option>
+                            {seriesList.map((s: any) => (
+                              <option key={s.id} value={s.id}>{s.id}</option>
+                            ))}
+                            <option value="custom_new_entry" className="text-yellow-400 font-bold">
+                              + Create New Series
+                            </option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white focus:border-white/50 outline-none"
+                            placeholder="Enter new series name..."
+                            autoFocus
+                            value={formData.series}
+                            onChange={(e) => setFormData({ ...formData, series: e.target.value })}
+                          />
+                          <button
+                            onClick={() => { setIsCustomSeries(false); setFormData({ ...formData, series: "HydroPro" }); }}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-xs rounded-lg border border-white/10"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -207,7 +282,7 @@ export default function ProductEditor({ params }: PageProps) {
                 </div>
                 
                 <div className="space-y-4">
-                    {formData.images?.map((url, i) => (
+                    {formData.images?.map((url: string, i: number) => (
                         <div key={i} className="flex gap-4 items-start">
                              <div className="w-16 h-16 bg-[#0A1A2F] rounded-lg border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {url ? (
@@ -225,6 +300,34 @@ export default function ProductEditor({ params }: PageProps) {
                                 onChange={(e) => handleArrayChange('images', i, e.target.value)}
                             />
                             <button onClick={() => removeArrayItem('images', i)} className="p-3 text-red-400 hover:bg-red-400/10 rounded-lg">
+                                <X size={18} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </FadeIn>
+
+            {/* 3. Features Section */}
+            <FadeIn delay={0.15} className="bg-[#133159] p-8 rounded-2xl border border-white/5">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-lg font-bold text-white">Features</h2>
+                    <button onClick={() => addArrayItem('features')} className="text-xs bg-[#0A1A2F] text-white px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/50 transition-colors">
+                        + Add Feature
+                    </button>
+                </div>
+                
+                <div className="space-y-3">
+                    {formData.features?.map((feat: string, i: number) => (
+                        <div key={i} className="flex gap-4 items-center">
+                            <span className="text-[#C9D1D9]/50 text-xs w-4">{i + 1}.</span>
+                            <input 
+                                type="text" 
+                                placeholder="e.g. 24h Cold Retention"
+                                className="flex-1 bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white text-sm outline-none"
+                                value={feat}
+                                onChange={(e) => handleArrayChange('features', i, e.target.value)}
+                            />
+                            <button onClick={() => removeArrayItem('features', i)} className="p-3 text-red-400 hover:bg-red-400/10 rounded-lg">
                                 <X size={18} />
                             </button>
                         </div>
@@ -257,11 +360,13 @@ export default function ProductEditor({ params }: PageProps) {
                         className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white font-mono text-lg outline-none"
                         value={formData.stock}
                         onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value)})}
+                        disabled 
                     />
+                    <p className="text-[10px] text-[#C9D1D9]/50 mt-1">Calculated from variants below</p>
                 </div>
             </FadeIn>
 
-            {/* 4. VARIANTS (UPDATED WITH SIZE) */}
+            {/* 4. VARIANTS */}
             <FadeIn delay={0.3} className="bg-[#133159] p-6 rounded-2xl border border-white/5">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold text-white">Variants</h2>
@@ -270,45 +375,36 @@ export default function ProductEditor({ params }: PageProps) {
                     </button>
                 </div>
                 
-                {/* Variant Headers */}
                 <div className="grid grid-cols-8 gap-2 mb-2 px-1">
                     <span className="col-span-3 text-[10px] uppercase text-[#C9D1D9] font-bold">Color</span>
-                    <span className="col-span-3 text-[10px] uppercase text-[#C9D1D9] font-bold">Size (ml/L)</span>
+                    <span className="col-span-3 text-[10px] uppercase text-[#C9D1D9] font-bold">Size</span>
                     <span className="col-span-2 text-[10px] uppercase text-[#C9D1D9] text-center font-bold">Qty</span>
                 </div>
 
                 <div className="space-y-3">
-                    {formData.variants?.map((v, i) => (
+                    {formData.variants?.map((v: any, i: number) => (
                         <div key={i} className="grid grid-cols-8 gap-2 items-center relative group">
-                            
-                            {/* Color Input */}
                             <input 
                                 type="text" 
                                 placeholder="Black"
-                                className="col-span-3 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm outline-none focus:border-white/50"
+                                className="col-span-3 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm outline-none"
                                 value={v.name}
                                 onChange={(e) => handleVariantChange(i, 'name', e.target.value)}
                             />
-
-                            {/* Size Input (NEW) */}
                             <input 
                                 type="text" 
                                 placeholder="500ml"
-                                className="col-span-3 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm outline-none focus:border-white/50"
+                                className="col-span-3 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm outline-none"
                                 value={v.capacity}
                                 onChange={(e) => handleVariantChange(i, 'capacity', e.target.value)}
                             />
-
-                            {/* Stock Input */}
                             <input 
                                 type="number" 
                                 placeholder="0"
-                                className="col-span-2 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm text-center outline-none focus:border-white/50"
+                                className="col-span-2 bg-[#0A1A2F] border border-white/10 rounded-lg p-2 text-white text-sm text-center outline-none"
                                 value={v.stock}
                                 onChange={(e) => handleVariantChange(i, 'stock', parseInt(e.target.value))}
                             />
-
-                            {/* Delete Button (Hover) */}
                             <button 
                               onClick={() => removeVariant(i)}
                               className="absolute -right-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -319,9 +415,7 @@ export default function ProductEditor({ params }: PageProps) {
                     ))}
                 </div>
             </FadeIn>
-
         </div>
-
       </div>
     </div>
   );

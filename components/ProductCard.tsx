@@ -1,36 +1,40 @@
-"use client";
-
 import Link from "next/link";
-import { Product } from "@/lib/data";
-import { HoverCard } from "@/components/ui/Motion";
+import Image from "next/image";
 
-export default function ProductCard({ product }: { product: Product }) {
+// Define the exact shape of your Database Product
+interface ProductCardProps {
+  product: {
+    id: string;
+    name: string;
+    series: string;
+    basePrice: number;      // Matches DB
+    images: { url: string }[]; // Matches DB Relation
+  };
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  // Safe check to get the first image URL or use a placeholder
+  const mainImage = product.images?.[0]?.url || "/placeholder.jpg";
+
   return (
-    <HoverCard className="group relative cursor-pointer h-full">
-      <Link href={`/shop/${product.series.toLowerCase()}/${product.id}`}>
-        {/* CARD BACKGROUND: Secondary Color #133159 */}
-        <div className="aspect-[3/4] bg-[#133159] rounded-2xl overflow-hidden relative mb-5 border border-white/5">
-          
-          {/* Placeholder for Image (Replace with <Image> tag when you have real files) */}
-          <div className="absolute inset-0 flex items-center justify-center text-[#C9D1D9]/20 font-bold text-4xl uppercase select-none">
-            {product.series.substring(0, 3)}
-          </div>
-          
-          {/* Add to Cart Button (Appears on Hover) */}
-          <div className="absolute bottom-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-             <button className="bg-[#C9D1D9] text-[#0A1A2F] w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform font-bold text-xl pb-1 shadow-lg">
-               +
-             </button>
-          </div>
-        </div>
-        
-        {/* TEXT CONTENT */}
-        <h3 className="font-semibold text-white tracking-wide text-lg mb-1">{product.name}</h3>
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-[#C9D1D9] opacity-80">{product.series}</p>
-          <p className="text-sm font-bold text-white">₹{product.basePrice.toLocaleString()}</p>
-        </div>
-      </Link>
-    </HoverCard>
+    <Link href={`/product/${product.id}`} className="group block">
+      <div className="relative aspect-square bg-[#133159] rounded-xl overflow-hidden mb-4 border border-white/5 group-hover:border-white/20 transition-colors">
+        {/* Product Image */}
+        <Image
+          src={mainImage}
+          alt={product.name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+      </div>
+      
+      <div className="space-y-1">
+        <h3 className="text-white font-bold text-lg group-hover:text-[#C9D1D9] transition-colors">
+          {product.name}
+        </h3>
+        <p className="text-[#C9D1D9] opacity-70 text-sm">{product.series}</p>
+        <p className="text-white font-mono">₹{product.basePrice.toLocaleString()}</p>
+      </div>
+    </Link>
   );
 }

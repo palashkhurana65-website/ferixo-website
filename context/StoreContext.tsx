@@ -1,66 +1,122 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
-import { products as initialProducts, Product } from "@/lib/data";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { products as initialProducts } from "@/lib/data";
+
+// 1. Define Types
+type Product = any; 
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  variant: string;
+  quantity: number;
+};
 
 interface StoreContextType {
+  // Admin State
   products: Product[];
-  addProduct: (product: Product) => void;
-  updateProduct: (id: string, updated: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  recordSale: (id: string, quantity: number) => void;
+  addProduct: (p: Product) => void;
+  updateProduct: (id: string, p: Product) => void;
+  
+  // Cart State
+  cart: CartItem[];
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (cartId: string) => void;
+  updateCartQuantity: (cartId: string, change: number) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
-  // Initialize with the data from data.ts
+export const StoreProvider = ({ children }: { children: ReactNode }) => {
+  // --- ADMIN STATE ---
   const [products, setProducts] = useState<Product[]>(initialProducts);
 
-  const addProduct = (product: Product) => {
-    // Generate a simple ID if "new" is passed
-    const newProduct = { 
-      ...product, 
-      id: product.id === "new" ? `prod-${Date.now()}` : product.id 
-    };
-    setProducts((prev) => [newProduct, ...prev]);
+  const addProduct = (newProduct: Product) => {
+    setProducts((prev) => [...prev, { ...newProduct, id: Date.now().toString() }]);
   };
 
-  const updateProduct = (id: string, updated: Partial<Product>) => {
-    setProducts((prev) => 
-      prev.map((p) => (p.id === id ? { ...p, ...updated } : p))
-    );
+  const updateProduct = (id: string, updatedData: Product) => {
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updatedData } : p)));
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  // --- CART STATE ---
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false); // <--- NEW FLAG
+
+  // 1. Load Cart (Runs ONCE on mount)
+  useEffect(() => {
+    const savedCart = localStorage.getItem("ferixo_cart");
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error("Failed to parse cart", e);
+      }
+    }
+    setIsInitialized(true); // <--- Allow saving ONLY after loading is done
+  }, []);
+
+  // 2. Save Cart (Runs whenever cart changes, BUT blocked until initialized)
+  useEffect(() => {
+    if (isInitialized) {
+      localStorage.setItem("ferixo_cart", JSON.stringify(cart));
+    }
+  }, [cart, isInitialized]);
+
+  const addToCart = (newItem: CartItem) => {
+    setCart((prev) => {
+      const existing = prev.find(
+        (item) => item.id === newItem.id && item.variant === newItem.variant
+      );
+
+      if (existing) {
+        return prev.map((item) =>
+          item.id === newItem.id && item.variant === newItem.variant
+            ? { ...item, quantity: item.quantity + newItem.quantity }
+            : item
+        );
+      }
+      return [...prev, { ...newItem }];
+    });
   };
 
-  const recordSale = (id: string, quantity: number) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-           return { 
-             ...p, 
-             sales: p.sales + quantity, 
-             stock: Math.max(0, p.stock - quantity) 
-           };
+  const removeFromCart = (uniqueId: string) => {
+    setCart((prev) => prev.filter((item) => `${item.id}-${item.variant}` !== uniqueId));
+  };
+
+  const updateCartQuantity = (uniqueId: string, change: number) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (`${item.id}-${item.variant}` === uniqueId) {
+          const newQty = Math.max(1, item.quantity + change);
+          return { ...item, quantity: newQty };
         }
-        return p;
+        return item;
       })
     );
   };
 
   return (
-    <StoreContext.Provider value={{ products, addProduct, updateProduct, deleteProduct, recordSale }}>
+    <StoreContext.Provider
+      value={{
+        products,
+        addProduct,
+        updateProduct,
+        cart,
+        addToCart,
+        removeFromCart,
+        updateCartQuantity,
+      }}
+    >
       {children}
     </StoreContext.Provider>
   );
-}
+};
 
-// Custom Hook for easy access
-export function useStore() {
+export const useStore = () => {
   const context = useContext(StoreContext);
   if (!context) throw new Error("useStore must be used within a StoreProvider");
   return context;
-}
+};
