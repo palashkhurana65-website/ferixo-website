@@ -36,7 +36,7 @@ export default function Hero() {
           <FadeIn delay={0.2}>
             <p className="text-lg md:text-xl leading-relaxed mb-10 text-[#C9D1D9] drop-shadow-md max-w-lg mx-auto md:mx-0">
               Experience the perfect balance of aesthetics and performance. 
-              Engineered to keep your drinks cold for 24 hours.
+              Engineered to keep your drinks cold for 12 hours.
             </p>
           </FadeIn>
 
