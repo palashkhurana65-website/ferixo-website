@@ -50,7 +50,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
       
       <div className="space-y-1">
-        <h3 className="text-white font-bold text-lg group-hover:text-[#C9D1D9] transition-colors">
+        <h3 className="text-white font-bold text-lg group-hover:text-[#C9D1D8] transition-colors">
           {product.name}
         </h3>
         <p className="text-[#C9D1D9] opacity-70 text-sm">{product.series}</p>
