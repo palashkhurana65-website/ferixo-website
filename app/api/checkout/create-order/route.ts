@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import Razorpay from "razorpay";
+import { authOptions } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 const razorpay = new Razorpay({
