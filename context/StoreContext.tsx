@@ -19,6 +19,7 @@ interface StoreContextType {
   products: Product[];
   addProduct: (p: Product) => void;
   updateProduct: (id: string, p: Product) => void;
+  deleteProduct: (id: string) => Promise<void>;
   
   // Cart State
   cart: CartItem[];
@@ -98,12 +99,25 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const deleteProduct = async (id: string) => {
+    // 1. Optimistic UI Update (Remove immediately)
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+
+    // 2. Call API to delete from DB
+    try {
+      await fetch(`/api/products/${id}`, { method: "DELETE" });
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
         products,
         addProduct,
         updateProduct,
+        deleteProduct,
         cart,
         addToCart,
         removeFromCart,
