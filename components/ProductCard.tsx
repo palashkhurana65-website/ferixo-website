@@ -1,20 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 
-// Define the exact shape of your Database Product
+// FIX: Update interface to accept string[] OR { url: string }[]
 interface ProductCardProps {
   product: {
     id: string;
     name: string;
     series: string;
-    basePrice: number;      // Matches DB
-    images: { url: string }[]; // Matches DB Relation
+    basePrice: number;
+    // This Union Type allows both Static Data and DB Data
+    images: string[] | { url: string }[]; 
+    // Allow loose typing for other optional fields like stock/sales
+    [key: string]: any; 
   };
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  // Safe check to get the first image URL or use a placeholder
-  const mainImage = product.images?.[0]?.url || "/placeholder.jpg";
+  
+  // FIX: Helper logic to extract URL safely from either format
+  const getMainImage = () => {
+    if (!product.images || product.images.length === 0) return "/placeholder.jpg";
+    
+    const firstImage = product.images[0];
+    
+    // 1. If it's a simple string (Static Data)
+    if (typeof firstImage === "string") {
+      return firstImage;
+    } 
+    // 2. If it's an object (Database Data)
+    else {
+      return firstImage.url || "/placeholder.jpg";
+    }
+  };
+
+  const mainImage = getMainImage();
 
   return (
     <Link href={`/product/${product.id}`} className="group block">
