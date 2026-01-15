@@ -3,22 +3,17 @@ import { seriesList } from "@/lib/data"; // Keep series definitions static
 import Link from "next/link";
 import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db"; // Use Singleton
 
-const prisma = new PrismaClient();
+export const dynamic = "force-dynamic";
 
-// 1. Fetch Real "Best Sellers" from Database
-async function getBestSellers() {
-  const products = await prisma.product.findMany({
+export default async function ShopPage() {
+  // 1. Fetch Real "Best Sellers" from Database
+  const bestSellers = await prisma.product.findMany({
     take: 3, // Top 3
     orderBy: { sales: 'desc' }, // Sorted by sales
     include: { images: true, variants: true } // Get images & prices
   });
-  return products;
-}
-
-export default async function ShopPage() {
-  const bestSellers = await getBestSellers();
 
   return (
     <main className="min-h-screen bg-[#0A1A2F] pt-32 pb-20 px-6">
@@ -79,15 +74,7 @@ export default async function ShopPage() {
              
              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {bestSellers.map((p) => (
-                  // Now we can just pass the product directly!
-                 // We only cast 'series' because of the string vs Enum strictness
-                      <ProductCard 
-                         key={p.id} 
-                         product={{
-                           ...p,
-                         series: p.series as any 
-                    }} 
-                    />
+                      <ProductCard key={p.id} product={p} />
                  ))}
             </div>
           </FadeIn>

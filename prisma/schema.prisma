@@ -67,6 +67,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?   // Added for manual/guest accounts
+  phone         String?
   role          String    @default("CUSTOMER") // "ADMIN" or "CUSTOMER"
   
   createdAt     DateTime  @default(now())

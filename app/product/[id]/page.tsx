@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db"; // Use Singleton
 import { notFound } from "next/navigation";
-import ProductView from "@/components/ProductView"; // Import the component we just made
-
-const prisma = new PrismaClient();
+import ProductView from "@/components/ProductView";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -23,6 +21,17 @@ export default async function ProductPage({ params }: PageProps) {
 
   if (!product) return notFound();
 
-  // Pass data to the Client Component
-  return <ProductView product={product} />;
+  // SERIALIZATION: Convert Date objects to strings for the Client Component
+  // This fixes the "Only plain objects can be passed to Client Components" error
+  const serializableProduct = {
+    ...product,
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+    // Ensure relations are plain arrays
+    variants: product.variants.map(v => ({...v})),
+    features: product.features.map(f => ({...f})),
+    images: product.images.map(i => ({...i}))
+  };
+
+  return <ProductView product={serializableProduct} />;
 }
