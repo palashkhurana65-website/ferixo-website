@@ -73,7 +73,7 @@ export default function SignInPage() {
               value={formData.email}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#0A1A2F] placeholder-[#133159]/60 focus:ring-2 focus:ring-[#0A1A2F] focus:border-transparent outline-none transition-all"
-              placeholder="you@ferixo.com"
+              placeholder="you@example.com"
             />
           </div>
 

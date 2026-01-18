@@ -118,16 +118,24 @@ export default function CheckoutPage() {
 
   // 2. The new Trigger function
   const initiatePayment = () => {
-    if (!shippingForm.name || !shippingForm.phone || !shippingForm.street || !shippingForm.pincode) {
-        alert("Please fill in all shipping details");
+    // FIX: Validate ALL fields. Previously City/State were missing from this check.
+    if (
+      !shippingForm.name || 
+      !shippingForm.phone || 
+      !shippingForm.street || 
+      !shippingForm.pincode ||
+      !shippingForm.city ||   // Added
+      !shippingForm.state     // Added
+    ) {
+        alert("Please fill in all shipping details (City and State are required)");
         return;
     }
 
     // Check if address is new (and user has saved addresses previously)
     if (savedAddresses.length > 0 && !isAddressSaved(shippingForm)) {
-      setShowSaveModal(true); // Open Popup
+      setShowSaveModal(true); 
     } else {
-      processPayment(true); // Default to save/ignore if already saved
+      processPayment(true); 
     }
   };
 
@@ -245,18 +253,20 @@ export default function CheckoutPage() {
                             value={shippingForm.pincode} 
                             onChange={e => handlePincodeChange(e.target.value, 'shipping')}
                         />
+                        {/* FIX: Removed readOnly and added onChange so user can fix State if API fails */}
                         <input 
                             placeholder="State" 
-                            className="bg-[#133159]/50 border border-white/10 p-4 rounded text-white/50 cursor-not-allowed"
+                            className="bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
                             value={shippingForm.state} 
-                            readOnly 
+                            onChange={e => setShippingForm({...shippingForm, state: e.target.value})}
                         />
                     </div>
+                    {/* FIX: Removed readOnly and added onChange */}
                     <input 
                         placeholder="City" 
-                        className="w-full bg-[#133159]/50 border border-white/10 p-4 rounded text-white/50 cursor-not-allowed"
+                        className="w-full bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
                         value={shippingForm.city} 
-                        readOnly
+                        onChange={e => setShippingForm({...shippingForm, city: e.target.value})}
                     />
                 </div>
             </div>
@@ -295,18 +305,20 @@ export default function CheckoutPage() {
                                 value={billingForm.pincode} 
                                 onChange={e => handlePincodeChange(e.target.value, 'billing')}
                             />
+                            {/* FIX: Removed readOnly */}
                             <input 
                                 placeholder="State" 
-                                className="bg-[#133159]/50 border border-white/10 p-4 rounded text-white/50"
+                                className="bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
                                 value={billingForm.state} 
-                                readOnly 
+                                onChange={e => setBillingForm({...billingForm, state: e.target.value})}
                             />
                         </div>
+                        {/* FIX: Removed readOnly */}
                         <input 
                             placeholder="City" 
-                            className="w-full bg-[#133159]/50 border border-white/10 p-4 rounded text-white/50"
+                            className="w-full bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
                             value={billingForm.city} 
-                            readOnly
+                            onChange={e => setBillingForm({...billingForm, city: e.target.value})}
                         />
                     </div>
                 )}

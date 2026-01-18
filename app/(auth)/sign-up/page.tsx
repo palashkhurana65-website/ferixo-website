@@ -85,7 +85,7 @@ export default function SignUpPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#0A1A2F] placeholder-[#133159]/60 focus:ring-2 focus:ring-[#0A1A2F] focus:border-transparent outline-none transition-all"
-              placeholder="John Doe"
+              placeholder="Your Name"
             />
           </div>
 
@@ -98,7 +98,7 @@ export default function SignUpPage() {
               value={formData.email}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#0A1A2F] placeholder-[#133159]/60 focus:ring-2 focus:ring-[#0A1A2F] outline-none"
-              placeholder="john@example.com"
+              placeholder="you@example.com"
             />
           </div>
 
