@@ -121,7 +121,7 @@ export default function ProductView({ product }: { product: any }) {
             </div>
           )}
         
-        {/* TRUST BADGES (Amazon Style) */}
+        {/* TRUST BADGE (Amazon Style) */}
           <div className="grid grid-cols-3 pb-10 gap-10 border-t border-white/10 pt-6">
             <div className="text-center">
                <div className="w-10 h-10 mx-auto bg-[#133159] rounded-full flex items-center justify-center mb-2 text-blue-400">
