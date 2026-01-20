@@ -93,7 +93,7 @@ export default function SupportPage() {
                     <input 
                       required
                       className="w-full bg-[#0A1A2F] border border-white/10 p-3 rounded focus:border-blue-400 focus:outline-none" 
-                      placeholder="John Doe" 
+                      placeholder="Your Name" 
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                     />
