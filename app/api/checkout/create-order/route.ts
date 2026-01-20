@@ -70,7 +70,7 @@ export async function POST(req: Request) {
        }
     }
 
-    const shippingAmount = subtotal > 5000 ? 0 : 99;
+    const shippingAmount = subtotal > 5000 ? 0 : 0;
 
     // Final Amount = Subtotal + Shipping - Discount 
     // (We do NOT add taxAmount because subtotal already has it)
