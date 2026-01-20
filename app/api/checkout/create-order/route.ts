@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         await prisma.address.create({
           data: {
             userId: user.id,
-            // Explicitly map fields to ensure safety
+            // explicitly map fields to ensure safety
             type: "SHIPPING", 
             country: "India", 
             street: shippingAddress.street,
