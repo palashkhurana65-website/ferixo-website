@@ -53,7 +53,7 @@ export default function Hero() {
             </Link>
             
             {/* STORY BUTTON - Forced Colors */}
-            <Link href="/about">
+            <Link href="/story">
               <button 
                 className="bg-[#C9D1D9] text-[#0A1A2F] font-bold transition-transform duration-300 transform hover:scale-105 uppercase tracking-wide text-sm flex items-center justify-center shadow-lg px-6"
                 style={{ height: '44px', borderRadius: '10px' }}
