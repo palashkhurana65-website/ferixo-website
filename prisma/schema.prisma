@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -28,15 +26,15 @@ model Product {
   features    Feature[]
   images      Image[]
   variants    Variant[]
-  // Relation to OrderItems (Optional: strictly needed if you want DB-level integrity for line items)
-  // For the Json based order system below, this is optional, but good to keep.
+  reviews     Review[]    // <--- ADDED THIS RELATION
+  
   orderItems  OrderItem[] 
 }
 
 model Variant {
   id        String  @id @default(uuid())
-  name      String  // e.g. "Matte Black"
-  capacity  String? // e.g. "500ml"
+  name      String  
+  capacity  String? 
   stock     Int     @default(0)
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -56,8 +54,20 @@ model Feature {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
+// --- NEW REVIEW MODEL ---
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String   @db.Text
+  userName  String   // Storing name directly for simplicity (or link to User)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+}
+
 // ==============================
-// 2. USERS & AUTH (Merged)
+// 2. USERS & AUTH
 // ==============================
 
 model User {
@@ -66,17 +76,15 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // Added for manual/guest accounts
+  password      String?
   phone         String?
-  role          String    @default("CUSTOMER") // "ADMIN" or "CUSTOMER"
+  role          String    @default("CUSTOMER")
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]
-  
-  // Relations to Commerce
   orders        Order[]
   addresses     Address[]
 }
@@ -130,15 +138,15 @@ model Address {
   state       String
   pincode     String
   country     String   @default("India")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Coupon {
   id          String   @id @default(cuid())
   code        String   @unique
-  discount    Int      // Percentage (e.g. 10 for 10%)
-  maxAmount   Int?     // Max discount in Rupees
+  discount    Int      
+  maxAmount   Int?     
   expiryDate  DateTime
   isActive    Boolean  @default(true)
 }
@@ -147,26 +155,18 @@ model Order {
   id              String   @id @default(cuid())
   userId          String
   user            User     @relation(fields: [userId], references: [id])
-  
-  // We store the cart snapshot as JSON to preserve exact price/state at time of purchase
   items           Json     
-  
   totalAmount     Float
   taxAmount       Float
   shippingAmount  Float
   discountAmount  Float
   finalAmount     Float
-  
-  status          String   @default("PENDING") // PENDING, PAID, SHIPPED
-  paymentId       String?  // Razorpay Payment ID
-  
+  status          String   @default("PENDING") 
+  paymentId       String?
   createdAt       DateTime @default(now())
-
-  // Optional: keep this if you want to perform analytics on individual products later
   orderItems      OrderItem[] 
 }
 
-// Optional: Link table if you want strict SQL relations instead of JSON
 model OrderItem {
   id          String  @id @default(uuid())
   orderId     String

@@ -1,11 +1,24 @@
 import { FadeIn, HoverCard } from "@/components/ui/Motion";
-import { seriesList } from "@/lib/data"; // Keep series definitions static
+import { seriesList } from "@/lib/data"; 
 import Link from "next/link";
 import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
-import { prisma } from "@/lib/db"; // Use Singleton
+import { prisma } from "@/lib/db"; 
 
 export const dynamic = "force-dynamic";
+
+// [NEW] Manual Image Mapping: Add your image paths here matching the Series ID
+const SERIES_IMAGES: Record<string, string> = {
+  "HydroPro": "/shop/hydro 2.jpg",    // Replace with actual path
+  "ThermoSmart": "/shop/thermo.jpg", // Replace with actual path
+  "Allure": "/shop/allure.jpg",
+  "Fleur" : "/shop/fleur.jpg",
+  "MiniSip" : "/shop/minisip.jpg",
+  "FlexHandle" : "/shop/flexhandle.jpg",
+  "BrewMaster" : "/shop/brew.jpg",
+  "Home Living" : "/shop/home.jpg",
+  // Add more IDs as needed...
+};
 
 export default async function ShopPage() {
   // 1. Fetch Real "Best Sellers" from Database
@@ -29,7 +42,7 @@ export default async function ShopPage() {
           </p>
         </FadeIn>
 
-        {/* SERIES GRID (Static Categories) */}
+{/* SERIES GRID (Static Categories) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-24">
           {seriesList.map((series, i) => (
             <FadeIn key={series.id} delay={i * 0.05}>
@@ -41,7 +54,8 @@ export default async function ShopPage() {
                    {/* Series Image */}
                    <div className="absolute inset-0">
                       <Image 
-                        src={series.image} 
+                        // UPDATED: Uses the manual mapping defined at the top
+                        src={SERIES_IMAGES[series.id] || "/placeholder.jpg"} 
                         alt={series.id}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-110"

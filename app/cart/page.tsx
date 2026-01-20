@@ -12,7 +12,7 @@ export default function CartPage() {
 
   // Calculate Totals Dynamically
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = cart.length > 0 ? 99.00 : 0;
+  const shipping = cart.length > 0 ? 0 : 0;
   const total = subtotal + shipping;
 
   // Helper to format Rupees

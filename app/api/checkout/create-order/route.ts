@@ -55,10 +55,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Calculate Totals
+// 4. Calculate Totals (Inclusive Logic)
     const subtotal = cartItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-    const taxRate = 0.18;
-    const taxAmount = subtotal * taxRate;
+    
+    // Extract Tax (Do not add it)
+    const taxAmount = subtotal - (subtotal / 1.18);
     
     let discountAmount = 0;
     if (couponCode) {
@@ -70,7 +71,10 @@ export async function POST(req: Request) {
     }
 
     const shippingAmount = subtotal > 5000 ? 0 : 99;
-    const finalAmount = Math.round(subtotal + taxAmount + shippingAmount - discountAmount);
+
+    // Final Amount = Subtotal + Shipping - Discount 
+    // (We do NOT add taxAmount because subtotal already has it)
+    const finalAmount = Math.round(subtotal + shippingAmount - discountAmount);
 
     // 5. Create Order on Razorpay
     const razorpayOrder = await razorpay.orders.create({

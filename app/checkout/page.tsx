@@ -61,14 +61,17 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
 
 
-  // --- 2. CALCULATIONS ---
+// --- 2. CALCULATIONS (GST Inclusive) ---
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   
-  // Tax logic depends on SHIPPING STATE
-  const taxRate = 0.18; 
-  const taxAmount = subtotal * taxRate;
-  const shippingCost = subtotal > 5000 ? 0 : 99; // Adjusted threshold example
-  const total = subtotal + taxAmount + shippingCost - discount;
+  // LOGIC: Extract the 18% tax that is ALREADY inside the price
+  // Formula: Tax = Price - (Price / 1.18)
+  const taxAmount = subtotal - (subtotal / 1.18);
+  
+  const shippingCost = subtotal > 5000 ? 0 : 0; 
+  
+  // TOTAL: We do NOT add taxAmount here because it is already inside 'subtotal'
+  const total = subtotal + shippingCost - discount;
 
   // --- 3. HELPERS ---
 
@@ -359,21 +362,21 @@ export default function CheckoutPage() {
                         <span>₹{subtotal.toLocaleString()}</span>
                     </div>
                     
-                    {/* GST Logic based on Shipping State */}
+                    {/* GST Display - Marked as INCLUDED so the math makes sense */}
                     {shippingForm.state.toLowerCase() === "punjab" ? (
                         <>
-                            <div className="flex justify-between text-sm text-white/60">
-                                <span>CGST (9%)</span>
+                            <div className="flex justify-between text-sm text-white/40">
+                                <span>CGST (9% Included)</span>
                                 <span>₹{(taxAmount/2).toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-sm text-white/60">
-                                <span>SGST (9%)</span>
+                            <div className="flex justify-between text-sm text-white/40">
+                                <span>SGST (9% Included)</span>
                                 <span>₹{(taxAmount/2).toFixed(2)}</span>
                             </div>
                         </>
                     ) : (
-                        <div className="flex justify-between text-sm text-white/60">
-                            <span>IGST (18%)</span>
+                        <div className="flex justify-between text-sm text-white/40">
+                            <span>IGST (18% Included)</span>
                             <span>₹{taxAmount.toFixed(2)}</span>
                         </div>
                     )}
