@@ -16,6 +16,7 @@ import {
   Plus,
   Zap 
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ProductView({ product }: { product: any }) {
   const { addToCart } = useStore();
@@ -104,9 +105,55 @@ export default function ProductView({ product }: { product: any }) {
     size: selectedSize || selectedVariant?.capacity || ""
   };
 
+  // --- CUSTOM TOAST TRIGGER ---
   const handleAddToCart = () => {
     addToCart(cartItem);
-    alert("Added to Cart!");
+    
+    // Custom "Premium" Notification
+    toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-[#0A1A2F]/90 backdrop-blur-md border border-white/10 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+      >
+        <div className="flex-1 w-0 p-4">
+          <div className="flex items-start">
+            {/* Product Image Thumbnail */}
+            <div className="flex-shrink-0 pt-0.5">
+              <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-white/10">
+                 <Image
+                    src={activeImage}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                 />
+              </div>
+            </div>
+            {/* Text Content */}
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-bold text-white">
+                Added to Cart
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                {product.name} ({selectedVariant?.name || "Standard"})
+              </p>
+            </div>
+          </div>
+        </div>
+        {/* View Cart Button */}
+        <div className="flex border-l border-white/10">
+          <button
+            onClick={() => {
+                toast.dismiss(t.id);
+                router.push("/cart");
+            }}
+            className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-xs font-bold text-blue-400 hover:text-blue-300 hover:bg-white/5 transition-colors focus:outline-none"
+          >
+            VIEW CART
+          </button>
+        </div>
+      </div>
+    ), { duration: 4000 });
   };
 
   const handleBuyNow = () => {

@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { StoreProvider } from "@/context/StoreContext"; // <--- IMPORT THIS
 import Providers from "@/components/Providers";
+import MarketingPopup from "@/components/ui/Toaster";
+import Toaster from "@/components/ui/Toaster";
 
 const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -25,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
            {children} 
           
           <Footer />
+          <Toaster />
         </StoreProvider>
         </Providers>
       </body>
