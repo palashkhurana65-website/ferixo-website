@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useStore } from "@/context/StoreContext";
 import { FadeIn } from "@/components/ui/Motion";
 import { useRouter } from "next/navigation"; 
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { 
   ShieldCheck, 
   Truck, 
@@ -115,6 +116,15 @@ export default function ProductView({ product }: { product: any }) {
 
   return (
     <main className="min-h-screen bg-[#0A1A2F] text-white pt-32 pb-20">
+
+      {/* BREADCRUMBS SECTION */}
+      <div className="max-w-7xl mx-auto px-6 mb-8">
+        <Breadcrumbs items={[
+          { label: "Home", href: "/" },
+          { label: "Shop", href: "/shop" },
+          { label: product.name, href: "#" }
+        ]} />
+      </div>
       
       {/* --- TOP SECTION: GALLERY + INFO --- */}
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
