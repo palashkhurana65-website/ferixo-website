@@ -376,7 +376,7 @@ export default function ProductView({ product }: { product: any }) {
         </div>
       </section>
 
-      {/* --- SECTION 3: REVIEWS & RELATED --- */}
+      {/* --- SECTION 3: REVIEWS & RELATED -- */}
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
         
         {/* REVIEWS COLUMN */}
