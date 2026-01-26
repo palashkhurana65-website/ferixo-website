@@ -362,7 +362,7 @@ export default function ProductView({ product }: { product: any }) {
                  <div className="relative rounded-2xl overflow-hidden border border-white/5">
                     <Image 
                         src={(() => {
-                            // Fallback to index 0 if index 2 doesn't exist
+                            // Fallback to index 0 if index 2 doesn't exis
                             const item = currentGallery[2] || currentGallery[0];
                             return typeof item === 'object' ? item?.url : (item || "/placeholder.jpg");
                         })()} 
