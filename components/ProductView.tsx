@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useStore } from "@/context/StoreContext";
 import { FadeIn } from "@/components/ui/Motion";
-import { useRouter } from "next/navigation"; // Added for redirection
+import { useRouter } from "next/navigation"; 
 import { 
   ShieldCheck, 
   Truck, 
@@ -13,38 +13,104 @@ import {
   ShoppingCart, 
   Minus, 
   Plus,
-  Zap // Added for Buy Now
+  Zap 
 } from "lucide-react";
 
 export default function ProductView({ product }: { product: any }) {
   const { addToCart } = useStore();
-  const router = useRouter(); // Initialize router
+  const router = useRouter(); 
   
-  // 1. STATE
-  const [selectedVariant, setSelectedVariant] = useState(product.variants[0] || null);
-  const [quantity, setQuantity] = useState(1);
-  const [activeImage, setActiveImage] = useState(product.images[0]?.url || "/placeholder.jpg");
+  // --- 1. SMART VARIANT LOGIC (Size -> Color) ---
+  
+  // A. Extract Unique Sizes
+  const uniqueSizes = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return [];
+    const sizes = product.variants.map((v: any) => v.capacity).filter(Boolean);
+    return Array.from(new Set(sizes)) as string[];
+  }, [product.variants]);
 
-  // Helper object for adding item
+  // B. Selection State
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+
+  // Initialize defaults
+  useEffect(() => {
+    if (uniqueSizes.length > 0 && !selectedSize) {
+      setSelectedSize(uniqueSizes[0]);
+    } else if (product.variants?.length > 0 && !selectedVariant) {
+        // Fallback for non-sized products
+        setSelectedVariant(product.variants[0]);
+    }
+  }, [uniqueSizes, product.variants]);
+
+  // C. Filter Colors based on Selected Size
+  const availableColors = useMemo(() => {
+    if (!product.variants) return [];
+    if (!selectedSize) return product.variants; 
+    return product.variants.filter((v: any) => v.capacity === selectedSize);
+  }, [product.variants, selectedSize]);
+
+  // D. Auto-select first color when size changes
+  useEffect(() => {
+    if (availableColors.length > 0) {
+      // Keep current color if possible, else switch to first available
+      const sameColorExists = availableColors.find((v: any) => v.name === selectedVariant?.name);
+      setSelectedVariant(sameColorExists || availableColors[0]);
+    }
+  }, [selectedSize, availableColors]);
+
+
+  // --- 2. ADVANCED GALLERY LOGIC (FIXED) ---
+
+  // Determine which set of images to show (Variant vs Product Hero)
+  const currentGallery = useMemo(() => {
+    // A. Check for Variant Images (Array)
+    if (selectedVariant?.images && Array.isArray(selectedVariant.images) && selectedVariant.images.length > 0) {
+      return selectedVariant.images; 
+    }
+    // B. Check for Legacy Variant Image (String)
+    if (selectedVariant?.image) {
+       return [selectedVariant.image];
+    }
+    // C. Fallback: Product Main Images
+    // Ensure we handle the case where product.images might be objects {url: "..."} or strings
+    return product.images && product.images.length > 0 ? product.images : ["/placeholder.jpg"];
+  }, [selectedVariant, product.images]);
+
+  // State for the currently displayed large image
+  const [activeImage, setActiveImage] = useState<string>("/placeholder.jpg");
+
+  // Auto-switch main view when the gallery source changes
+  useEffect(() => {
+     if (currentGallery.length > 0) {
+        // Handle both object structure {url: "..."} and flat string "..."
+        const firstImg = typeof currentGallery[0] === 'object' ? currentGallery[0].url : currentGallery[0];
+        setActiveImage(firstImg || "/placeholder.jpg");
+     }
+  }, [currentGallery]);
+
+  // --- 3. CART ACTIONS ---
+  
+  const [quantity, setQuantity] = useState(1);
+
   const cartItem = {
     id: product.id,
     name: product.name,
     price: product.basePrice,
     image: activeImage,
     quantity: quantity,
-    variant: selectedVariant?.name || "Standard"
+    variant: selectedVariant?.name || "Standard",
+    size: selectedSize || selectedVariant?.capacity || ""
   };
 
-  // Handle "Add to Cart"
   const handleAddToCart = () => {
     addToCart(cartItem);
     alert("Added to Cart!");
   };
 
-  // Handle "Buy Now"
   const handleBuyNow = () => {
-    addToCart(cartItem); // Add item
-    router.push("/checkout"); // Redirect immediately
+    addToCart(cartItem);
+    router.push("/checkout");
   };
 
   return (
@@ -53,28 +119,36 @@ export default function ProductView({ product }: { product: any }) {
       {/* --- TOP SECTION: GALLERY + INFO --- */}
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
         
-        {/* LEFT: MAIN GALLERY */}
+        {/* LEFT: MAIN GALLERY (UPDATED) */}
         <FadeIn className="space-y-4">
+          {/* Main Large Image */}
           <div className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#133159]">
             <Image 
               src={activeImage} 
               alt={product.name}
               fill 
-              className="object-cover"
+              className="object-cover transition-all duration-500"
             />
           </div>
+          
+          {/* Thumbnails - Now maps 'currentGallery' instead of hardcoded product.images */}
           <div className="flex gap-4 overflow-x-auto pb-2">
-            {product.images.map((img: any, i: number) => (
-              <button 
-                key={i}
-                onClick={() => setActiveImage(img.url)}
-                className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${
-                  activeImage === img.url ? "border-blue-400 opacity-100" : "border-transparent opacity-50 hover:opacity-100"
-                }`}
-              >
-                <Image src={img.url} alt="Thumbnail" fill className="object-cover" />
-              </button>
-            ))}
+            {currentGallery.map((img: any, i: number) => {
+               // Normalize URL (handle string vs object)
+               const imgUrl = typeof img === 'object' ? img.url : img;
+               
+               return (
+                <button 
+                  key={i}
+                  onClick={() => setActiveImage(imgUrl)}
+                  className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${
+                    activeImage === imgUrl ? "border-blue-400 opacity-100" : "border-transparent opacity-50 hover:opacity-100"
+                  }`}
+                >
+                  <Image src={imgUrl || "/placeholder.jpg"} alt="Thumbnail" fill className="object-cover" />
+                </button>
+              );
+            })}
           </div>
         </FadeIn>
 
@@ -86,15 +160,13 @@ export default function ProductView({ product }: { product: any }) {
             {product.series} Collection
           </span>
 
-       {/* TITLE & PRICE */}
+          {/* TITLE & PRICE */}
           <h1 className="text-4xl md:text-5xl font-bold mb-4">{product.name}</h1>
           <div className="flex items-center gap-4 mb-6">
             <span className="text-3xl font-mono">₹{product.basePrice}</span>
             
             <div className="flex items-center text-yellow-400 text-sm">
               <Star size={16} fill="currentColor" />
-              
-              {/* DYNAMIC RATING CALCULATION */}
               <span className="ml-1 font-bold">
                 {product.reviews && product.reviews.length > 0
                   ? (
@@ -104,7 +176,6 @@ export default function ProductView({ product }: { product: any }) {
                   : "0.0"
                 }
               </span>
-              
               <span className="text-white/40 ml-1">
                 ({product.reviews?.length || 0} Reviews)
               </span>
@@ -124,25 +195,54 @@ export default function ProductView({ product }: { product: any }) {
             </ul>
           </div>
 
-          {/* VARIANTS SELECTOR */}
+          {/* SMART VARIANTS SELECTOR */}
           {product.variants.length > 0 && (
-            <div className="mb-8">
-              <label className="block text-xs uppercase font-bold text-white/50 mb-3">Select Variant</label>
-              <div className="flex flex-wrap gap-3">
-                {product.variants.map((v: any, i: number) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedVariant(v)}
-                    className={`px-4 py-3 rounded-lg border text-sm transition-all ${
-                      selectedVariant?.name === v.name
-                        ? "bg-white text-[#0A1A2F] border-white font-bold"
-                        : "bg-transparent text-white border-white/20 hover:border-white/50"
-                    }`}
-                  >
-                    {v.name} <span className="opacity-50 ml-1">({v.capacity})</span>
-                  </button>
-                ))}
+            <div className="mb-8 space-y-6">
+              
+              {/* 1. SIZE SELECTOR */}
+              {uniqueSizes.length > 0 && (
+                  <div>
+                    <label className="block text-xs uppercase font-bold text-white/50 mb-3">Select Capacity</label>
+                    <div className="flex flex-wrap gap-3">
+                        {uniqueSizes.map((size) => (
+                        <button
+                            key={size}
+                            onClick={() => setSelectedSize(size)}
+                            className={`px-4 py-3 rounded-lg border text-sm transition-all ${
+                            selectedSize === size
+                                ? "bg-white text-[#0A1A2F] border-white font-bold"
+                                : "bg-transparent text-white border-white/20 hover:border-white/50"
+                            }`}
+                        >
+                            {size}
+                        </button>
+                        ))}
+                    </div>
+                  </div>
+              )}
+
+              {/* 2. COLOR SELECTOR */}
+              <div>
+                <label className="block text-xs uppercase font-bold text-white/50 mb-3">Select Variant</label>
+                <div className="flex flex-wrap gap-3">
+                    {availableColors.map((v: any, i: number) => (
+                    <button
+                        key={i}
+                        onClick={() => setSelectedVariant(v)}
+                        className={`px-4 py-3 rounded-lg border text-sm transition-all min-w-[100px] ${
+                        selectedVariant?.name === v.name
+                            ? "bg-white text-[#0A1A2F] border-white font-bold shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                            : "bg-transparent text-white border-white/20 hover:border-white/50"
+                        }`}
+                    >
+                        {v.name}
+                        {/* Show stock warning if needed */}
+                        {v.stock < 5 && v.stock > 0 && <span className="block text-[10px] text-red-400">Only {v.stock} left</span>}
+                    </button>
+                    ))}
+                </div>
               </div>
+
             </div>
           )}
         
@@ -175,7 +275,7 @@ export default function ProductView({ product }: { product: any }) {
                 </button>
             </div>
 
-            {/* Buy Now (Full Width) */}
+            {/* Buy Now */}
             <button 
                 onClick={handleBuyNow}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg h-14 flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
@@ -209,7 +309,7 @@ export default function ProductView({ product }: { product: any }) {
         </FadeIn>
       </div>
 
-      {/* --- DESCRIPTION SECTION (NEW) --- */}
+      {/* --- DESCRIPTION SECTION --- */}
       <div className="max-w-7xl mx-auto px-6 mb-24">
           <FadeIn className="bg-[#133159]/20 border border-white/5 rounded-2xl p-8 md:p-12">
             <h2 className="text-2xl font-bold mb-6 text-white border-b border-white/10 pb-4">Product Description</h2>
@@ -219,7 +319,7 @@ export default function ProductView({ product }: { product: any }) {
           </FadeIn>
       </div>
 
-      {/* --- SECTION 2: CINEMATIC SHOWCASE --- */}
+      {/* --- SECTION 2: CINEMATIC SHOWCASE (UPDATED) --- */}
       <section className="bg-black/20 py-24 mb-24 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6">
            <FadeIn className="text-center mb-16">
@@ -228,18 +328,48 @@ export default function ProductView({ product }: { product: any }) {
            </FadeIn>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[600px]">
-              {/* Large Feature Image */}
+              {/* Large Feature Image (Index 0) */}
               <div className="relative rounded-2xl overflow-hidden md:col-span-1 h-full border border-white/5">
-                 <Image src={product.images[0]?.url} alt="Feature" fill className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" />
+                 <Image 
+                    src={(() => {
+                        const item = currentGallery[0];
+                        return typeof item === 'object' ? item?.url : (item || "/placeholder.jpg");
+                    })()}
+                    alt="Feature" 
+                    fill 
+                    className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" 
+                 />
               </div>
               
               {/* Grid of smaller detail shots */}
               <div className="grid grid-rows-2 gap-4 h-full">
+                 
+                 {/* Detail 1 (Index 1) */}
                  <div className="relative rounded-2xl overflow-hidden border border-white/5">
-                    <Image src={product.images[1]?.url || product.images[0]?.url} alt="Detail" fill className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" />
+                    <Image 
+                        src={(() => {
+                            // Fallback to index 0 if index 1 doesn't exist
+                            const item = currentGallery[1] || currentGallery[0];
+                            return typeof item === 'object' ? item?.url : (item || "/placeholder.jpg");
+                        })()} 
+                        alt="Detail" 
+                        fill 
+                        className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" 
+                    />
                  </div>
+
+                 {/* Detail 2 (Index 2) */}
                  <div className="relative rounded-2xl overflow-hidden border border-white/5">
-                    <Image src={product.images[2]?.url || product.images[0]?.url} alt="Detail" fill className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" />
+                    <Image 
+                        src={(() => {
+                            // Fallback to index 0 if index 2 doesn't exist
+                            const item = currentGallery[2] || currentGallery[0];
+                            return typeof item === 'object' ? item?.url : (item || "/placeholder.jpg");
+                        })()} 
+                        alt="Detail" 
+                        fill 
+                        className="object-cover opacity-80 hover:opacity-100 transition-opacity duration-700" 
+                    />
                  </div>
               </div>
            </div>
@@ -249,7 +379,7 @@ export default function ProductView({ product }: { product: any }) {
       {/* --- SECTION 3: REVIEWS & RELATED --- */}
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
         
-        {/* REVIEWS COLUMN (CONNECTED TO DB) */}
+        {/* REVIEWS COLUMN */}
         <div className="lg:col-span-2">
            <h3 className="text-2xl font-bold mb-8 flex items-center gap-2">
              Customer Reviews <span className="text-sm font-normal text-white/40">({product.reviews?.length || 0} Verified)</span>

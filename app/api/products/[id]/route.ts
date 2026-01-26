@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db"; // FIX: Use the singleton instance
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+// Helper for Admin Check
+async function checkAdmin() {
+  const session = await getServerSession(authOptions);
+  // You can also check session?.user?.role === "ADMIN" if you set that up
+  if (session?.user?.email !== "palashkhurana65@gmail.com") {
+    return false;
+  }
+  return true;
+}
 
-// 1. GET SINGLE PRODUCT (This was missing!)
+// 1. GET SINGLE PRODUCT
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> } // Updated for Next.js 15
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Optional: Add Admin Check to GET if you want to hide products from public API calls
+    // const isAdmin = await checkAdmin();
+    // if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -26,11 +38,12 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // TRANSFORMATION: Convert Prisma objects back to simple arrays for the Frontend
+    // TRANSFORMATION: Match the structure expected by the Frontend Editor
     const formattedProduct = {
       ...product,
       images: product.images.map((img) => img.url),      // [{url: "a"}] -> ["a"]
       features: product.features.map((f) => f.text),     // [{text: "b"}] -> ["b"]
+      // Variants are passed as-is (Array of objects), Frontend handles grouping
     };
 
     return NextResponse.json(formattedProduct);
@@ -43,10 +56,10 @@ export async function GET(
 // 2. UPDATE PRODUCT
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> } // Updated for Next.js 15
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.email !== "palashkhurana65@gmail.com") {
+  const isAdmin = await checkAdmin();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -58,14 +71,14 @@ export async function PUT(
     const { images, features, variants, ...basicInfo } = body;
 
     // Transaction: Delete old relations -> Update base info -> Create new relations
-    await prisma.$transaction([
+    await prisma.$transaction(async (tx) => {
       // A. Clean up old related data
-      prisma.image.deleteMany({ where: { productId: id } }),
-      prisma.feature.deleteMany({ where: { productId: id } }),
-      prisma.variant.deleteMany({ where: { productId: id } }),
+      await tx.image.deleteMany({ where: { productId: id } });
+      await tx.feature.deleteMany({ where: { productId: id } });
+      await tx.variant.deleteMany({ where: { productId: id } });
 
       // B. Update Product & Re-create relations
-      prisma.product.update({
+      await tx.product.update({
         where: { id },
         data: {
           name: basicInfo.name,
@@ -84,12 +97,13 @@ export async function PUT(
              create: variants.map((v: any) => ({
                 name: v.name,
                 capacity: v.capacity,
-                stock: Number(v.stock)
+                stock: Number(v.stock),
+                images: v.images || []
              }))
           }
         }
-      })
-    ]);
+      });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -101,10 +115,10 @@ export async function PUT(
 // 3. DELETE PRODUCT
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> } // Updated for Next.js 15
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.email !== "palashkhurana65@gmail.com") {
+  const isAdmin = await checkAdmin();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

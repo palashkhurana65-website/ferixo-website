@@ -114,7 +114,7 @@ export default function SupportPage() {
                    required
                    type="email"
                    className="w-full bg-[#0A1A2F] border border-white/10 p-3 rounded focus:border-blue-400 focus:outline-none" 
-                   placeholder="john@example.com" 
+                   placeholder="you@example.com" 
                    value={formData.email}
                    onChange={e => setFormData({...formData, email: e.target.value})}
                  />

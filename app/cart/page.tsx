@@ -55,11 +55,10 @@ export default function CartPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-20">
           
-          {/* --- LEFT: CART ITEMS LIST --- */}
           <div className="lg:col-span-2 space-y-8">
             {cart.map((item) => {
-              // Create a unique key for the map loop
-              const uniqueId = `${item.id}-${item.variant}`;
+              // Create a unique key including Size
+              const uniqueId = `${item.id}-${item.variant}-${item.size||''}`;
               
               return (
                 <div key={uniqueId} className="flex gap-6 py-8 border-b border-[#C9D1D9]/10">
@@ -86,7 +85,11 @@ export default function CartPage() {
                           {formatPrice(item.price)}
                         </p>
                       </div>
-                      <p className="text-[#C9D1D9] text-sm mt-1">Variant: {item.variant}</p>
+                      {/* UPDATED: Show Size and Variant separately */}
+                      <div className="mt-2 text-sm text-[#C9D1D9] space-y-1">
+                          {item.size && <p className="flex items-center gap-2"><span className="opacity-50">Size:</span> {item.size}</p>}
+                          <p className="flex items-center gap-2"><span className="opacity-50">Color:</span> {item.variant}</p>
+                      </div>
                     </div>
 
                     {/* Controls */}

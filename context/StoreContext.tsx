@@ -10,7 +10,8 @@ type CartItem = {
   name: string;
   price: number;
   image: string;
-  variant: string;
+  variant: string; // Color/Name
+  size?: string;   // Capacity
   quantity: number;
 };
 
@@ -69,12 +70,17 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = (newItem: CartItem) => {
     setCart((prev) => {
       const existing = prev.find(
-        (item) => item.id === newItem.id && item.variant === newItem.variant
+        (item) => 
+          item.id === newItem.id && 
+          item.variant === newItem.variant && 
+          item.size === newItem.size
       );
 
       if (existing) {
         return prev.map((item) =>
-          item.id === newItem.id && item.variant === newItem.variant
+          item.id === newItem.id && 
+          item.variant === newItem.variant && 
+          item.size === newItem.size
             ? { ...item, quantity: item.quantity + newItem.quantity }
             : item
         );
@@ -84,13 +90,13 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = (uniqueId: string) => {
-    setCart((prev) => prev.filter((item) => `${item.id}-${item.variant}` !== uniqueId));
+    setCart((prev) => prev.filter((item) => `${item.id}-${item.variant}-${item.size||''}` !== uniqueId));
   };
 
   const updateCartQuantity = (uniqueId: string, change: number) => {
     setCart((prev) =>
       prev.map((item) => {
-        if (`${item.id}-${item.variant}` === uniqueId) {
+        if (`${item.id}-${item.variant}-${item.size||''}` === uniqueId) {
           const newQty = Math.max(1, item.quantity + change);
           return { ...item, quantity: newQty };
         }
