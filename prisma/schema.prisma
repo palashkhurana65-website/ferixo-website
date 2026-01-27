@@ -143,14 +143,6 @@ model Address {
   updatedAt   DateTime @updatedAt
 }
 
-model Coupon {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  discount    Int      
-  maxAmount   Int?     
-  expiryDate  DateTime
-  isActive    Boolean  @default(true)
-}
 
 model Order {
   id              String   @id @default(cuid())
@@ -178,4 +170,17 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
+}
+
+// ... your existing Product/Variant models ...
+
+
+model Coupon {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  discount  Int      // Percentage (e.g. 10 for 10%)
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 }

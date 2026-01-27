@@ -5,35 +5,57 @@ import { useStore } from "@/context/StoreContext";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CheckSquare, Square } from "lucide-react";
-
+import { CheckSquare, Square, Trash2, Tag, Loader2 } from "lucide-react";
 
 export default function CheckoutPage() {
-  const { cart } = useStore();
+  // 1. Get Global Store Data & Actions
+  const { cart, removeFromCart, applyCoupon, removeCoupon, coupon, cartTotal } = useStore();
   const router = useRouter();
+
+  // --- STATE ---
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const [pendingPayment, setPendingPayment] = useState(false); // To verify address before paying
+  const [loading, setLoading] = useState(false);
 
-  // --- 1. STATE MANAGEMENT ---
-  
+  // Coupon Local State
+  const [couponInput, setCouponInput] = useState("");
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+
   // Shipping Form
   const [shippingForm, setShippingForm] = useState({
     name: "",
     phone: "",
     street: "",
     city: "",
-    state: "", // Determines Tax
+    state: "", 
     pincode: "",
   });
 
-  // Fetch existing addresses to compare against
+  const [billingForm, setBillingForm] = useState({
+    name: "",
+    phone: "",
+    street: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
+
+  const [sameAsShipping, setSameAsShipping] = useState(true);
+
+  // --- EFFECTS ---
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (cart.length === 0) {
+        router.replace("/cart");
+    }
+  }, [cart, router]);
+
+  // Fetch addresses (Placeholder)
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
-        // Assuming you have an endpoint or using the user session to get addresses. 
-        // If not, this serves as a placeholder for where that logic goes.
-        // For now, we will assume empty if we can't fetch.
         // const res = await fetch("/api/user/addresses"); 
         // const data = await res.json();
         // setSavedAddresses(data);
@@ -44,38 +66,23 @@ export default function CheckoutPage() {
     fetchAddresses();
   }, []);
 
-  // Billing Form
-  const [billingForm, setBillingForm] = useState({
-    name: "", // Usually same as shipping name, but kept flexible
-    phone: "",
-    street: "",
-    city: "",
-    state: "",
-    pincode: "",
-  });
+  // --- HANDLERS ---
 
-  const [sameAsShipping, setSameAsShipping] = useState(true);
-  
-  const [couponCode, setCouponCode] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponMsg(null);
+    
+    const result = await applyCoupon(couponInput);
+    
+    setCouponMsg({
+        type: result.success ? 'success' : 'error',
+        text: result.message
+    });
+    setCouponLoading(false);
+    if (result.success) setCouponInput("");
+  };
 
-
-// --- 2. CALCULATIONS (GST Inclusive) ---
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  
-  // LOGIC: Extract the 18% tax that is ALREADY inside the price
-  // Formula: Tax = Price - (Price / 1.18)
-  const taxAmount = subtotal - (subtotal / 1.18);
-  
-  const shippingCost = subtotal > 5000 ? 0 : 0; 
-  
-  // TOTAL: We do NOT add taxAmount here because it is already inside 'subtotal'
-  const total = subtotal + shippingCost - discount;
-
-  // --- 3. HELPERS ---
-
-  // Auto-fill state/city from Pincode
   const handlePincodeChange = async (pin: string, type: 'shipping' | 'billing') => {
     const updateFn = type === 'shipping' ? setShippingForm : setBillingForm;
     const currentForm = type === 'shipping' ? shippingForm : billingForm;
@@ -95,23 +102,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const verifyCoupon = async () => {
-    // Keeping existing coupon logic
-    const res = await fetch("/api/coupons/verify", {
-        method: "POST",
-        body: JSON.stringify({ code: couponCode }),
-    });
-    const data = await res.json();
-    if(res.ok) {
-        const discVal = (subtotal * data.discount) / 100;
-        setDiscount(data.maxAmount ? Math.min(discVal, data.maxAmount) : discVal);
-        alert("Coupon Applied!");
-    } else {
-        alert(data.error);
-    }
-  };
-
-  // 1. Helper to check if address exists
   const isAddressSaved = (currentAddr: any) => {
     return savedAddresses.some(addr => 
       addr.street.toLowerCase() === currentAddr.street.toLowerCase() &&
@@ -119,22 +109,19 @@ export default function CheckoutPage() {
     );
   };
 
-  // 2. The new Trigger function
   const initiatePayment = () => {
-    // FIX: Validate ALL fields. Previously City/State were missing from this check.
     if (
       !shippingForm.name || 
       !shippingForm.phone || 
       !shippingForm.street || 
       !shippingForm.pincode ||
-      !shippingForm.city ||   // Added
-      !shippingForm.state     // Added
+      !shippingForm.city ||   
+      !shippingForm.state     
     ) {
         alert("Please fill in all shipping details (City and State are required)");
         return;
     }
 
-    // Check if address is new (and user has saved addresses previously)
     if (savedAddresses.length > 0 && !isAddressSaved(shippingForm)) {
       setShowSaveModal(true); 
     } else {
@@ -142,7 +129,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // 3. The Execution function
   const processPayment = async (saveToProfile: boolean) => {
     setShowSaveModal(false);
     setLoading(true);
@@ -150,52 +136,62 @@ export default function CheckoutPage() {
     const generatedEmail = `guest_${shippingForm.phone.replace(/\D/g, '')}@ferixo.com`;
     const finalBilling = sameAsShipping ? shippingForm : billingForm;
 
-    // Create Order
-    const res = await fetch("/api/checkout/create-order", {
-        method: "POST",
-        body: JSON.stringify({
-            email: generatedEmail,
-            name: shippingForm.name,
-            phone: shippingForm.phone,
-            shippingAddress: { ...shippingForm, country: "India", type: "SHIPPING" },
-            billingAddress: { ...finalBilling, country: "India", type: "BILLING" },
-            cartItems: cart,
-            couponCode,
-            saveToProfile: saveToProfile // <--- SEND FLAG
-        })
-    });
+    try {
+        // Create Order
+        const res = await fetch("/api/checkout/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email: generatedEmail,
+                name: shippingForm.name,
+                phone: shippingForm.phone,
+                shippingAddress: { ...shippingForm, country: "India", type: "SHIPPING" },
+                billingAddress: { ...finalBilling, country: "India", type: "BILLING" },
+                cartItems: cart,
+                couponCode: coupon?.code, 
+                saveToProfile: saveToProfile 
+            })
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if(!res.ok) {
-        alert("Order failed: " + (data.error || "Unknown error"));
+        if(!res.ok) {
+            alert("Order failed: " + (data.error || "Unknown error"));
+            setLoading(false);
+            return;
+        }
+
+        // Open Razorpay
+        const options = {
+            key: data.key,
+            amount: data.amount,
+            currency: data.currency,
+            name: "Ferixo Store",
+            description: "Premium Purchase",
+            order_id: data.razorpayOrderId,
+            handler: async function (response: any) {
+                router.push("/success");
+            },
+            prefill: {
+                name: shippingForm.name,
+                contact: shippingForm.phone,
+                email: generatedEmail,
+            },
+            theme: { color: "#0A1A2F" }
+        };
+
+        const rzp1 = new (window as any).Razorpay(options);
+        rzp1.open();
+    } catch (error) {
+        console.error("Payment Error", error);
+        alert("Payment initialization failed");
+    } finally {
         setLoading(false);
-        return;
     }
-
-    // Open Razorpay
-    const options = {
-        key: data.key,
-        amount: data.amount,
-        currency: data.currency,
-        name: "Ferixo Store",
-        description: "Premium Purchase",
-        order_id: data.razorpayOrderId,
-        handler: async function (response: any) {
-            router.push("/success");
-        },
-        prefill: {
-            name: shippingForm.name,
-            contact: shippingForm.phone,
-            email: generatedEmail,
-        },
-        theme: { color: "#0A1A2F" }
-    };
-
-    const rzp1 = new (window as any).Razorpay(options);
-    rzp1.open();
-    setLoading(false);
   };
+
+  // Tax calculation for display
+  const taxAmount = cartTotal.subtotal - (cartTotal.subtotal / 1.18);
 
   return (
     <div className="min-h-screen bg-[#0A1A2F] text-white pt-32 pb-20 px-6">
@@ -203,7 +199,7 @@ export default function CheckoutPage() {
       
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
         
-        {/* --- LEFT COLUMN: FORMS (Shipping & Billing) --- */}
+        {/* --- LEFT COLUMN: FORMS --- */}
         <div className="lg:col-span-7 space-y-8">
             
             {/* 1. Contact Info */}
@@ -256,7 +252,6 @@ export default function CheckoutPage() {
                             value={shippingForm.pincode} 
                             onChange={e => handlePincodeChange(e.target.value, 'shipping')}
                         />
-                        {/* FIX: Removed readOnly and added onChange so user can fix State if API fails */}
                         <input 
                             placeholder="State" 
                             className="bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
@@ -264,7 +259,6 @@ export default function CheckoutPage() {
                             onChange={e => setShippingForm({...shippingForm, state: e.target.value})}
                         />
                     </div>
-                    {/* FIX: Removed readOnly and added onChange */}
                     <input 
                         placeholder="City" 
                         className="w-full bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
@@ -308,7 +302,6 @@ export default function CheckoutPage() {
                                 value={billingForm.pincode} 
                                 onChange={e => handlePincodeChange(e.target.value, 'billing')}
                             />
-                            {/* FIX: Removed readOnly */}
                             <input 
                                 placeholder="State" 
                                 className="bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
@@ -316,7 +309,6 @@ export default function CheckoutPage() {
                                 onChange={e => setBillingForm({...billingForm, state: e.target.value})}
                             />
                         </div>
-                        {/* FIX: Removed readOnly */}
                         <input 
                             placeholder="City" 
                             className="w-full bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
@@ -333,36 +325,48 @@ export default function CheckoutPage() {
             <div className="bg-[#133159]/30 p-8 rounded-xl border border-white/10 sticky top-32">
                 <h3 className="text-xl font-bold mb-6">Order Summary</h3>
                 
-                {/* Product List */}
+                {/* 1. PRODUCT LIST (With Remove Button) */}
                 <div className="mb-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {cart.map((item, idx) => (
-                        <div key={`${item.id}-${idx}`} className="flex gap-4 items-center">
-                            <div className="relative w-16 h-16 rounded-md overflow-hidden bg-black/20 border border-white/5 flex-shrink-0">
-                                {item.image ? (
-                                    <Image src={item.image} alt={item.name} fill className="object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs text-white/20">IMG</div>
-                                )}
+                    {cart.map((item, idx) => {
+                        const uniqueId = `${item.id}-${item.variant}-${item.size||''}`;
+                        return (
+                            <div key={`${uniqueId}-${idx}`} className="flex gap-4 items-center group">
+                                <div className="relative w-16 h-16 rounded-md overflow-hidden bg-black/20 border border-white/5 flex-shrink-0">
+                                    {item.image ? (
+                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-white/20">IMG</div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm text-white truncate">{item.name}</p>
+                                    <p className="text-xs text-white/50">{item.variant} {item.size && `• ${item.size}`}</p>
+                                    <p className="text-xs text-white/70 mt-1">Qty: {item.quantity}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                    <div className="text-sm font-mono text-white">
+                                        ₹{(item.price * item.quantity).toLocaleString()}
+                                    </div>
+                                    <button 
+                                        onClick={() => removeFromCart(uniqueId)}
+                                        className="text-white/20 hover:text-red-400 transition-colors p-1"
+                                        title="Remove Item"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm text-white truncate">{item.name}</p>
-                                <p className="text-xs text-white/50">{item.variant}</p>
-                                <p className="text-xs text-white/70 mt-1">Qty: {item.quantity}</p>
-                            </div>
-                            <div className="text-sm font-mono text-white">
-                                ₹{(item.price * item.quantity).toLocaleString()}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="border-t border-white/10 pt-6 space-y-3 mb-6">
                     <div className="flex justify-between text-[#C9D1D9]">
                         <span>Subtotal</span>
-                        <span>₹{subtotal.toLocaleString()}</span>
+                        <span>₹{cartTotal.subtotal.toLocaleString()}</span>
                     </div>
                     
-                    {/* GST Display - Marked as INCLUDED so the math makes sense */}
+                    {/* GST Display */}
                     {shippingForm.state.toLowerCase() === "punjab" ? (
                         <>
                             <div className="flex justify-between text-sm text-white/40">
@@ -383,39 +387,73 @@ export default function CheckoutPage() {
 
                     <div className="flex justify-between text-[#C9D1D9]">
                         <span>Shipping</span>
-                        <span>{shippingCost === 0 ? "Free" : `₹${shippingCost}`}</span>
+                        <span>Free</span>
                     </div>
 
-                    {discount > 0 && (
-                        <div className="flex justify-between text-green-400">
-                            <span>Discount</span>
-                            <span>-₹{discount}</span>
+                    {/* Discount Display */}
+                    {coupon && (
+                         <div className="flex justify-between text-green-400">
+                             <span>Discount ({coupon.code})</span>
+                             <span>-₹{cartTotal.discount.toLocaleString()}</span>
+                         </div>
+                    )}
+                </div>
+
+                {/* 2. COUPON SECTION (Input or Active State) */}
+                <div className="mb-6 pt-4 border-t border-white/10">
+                    {coupon ? (
+                        <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 p-3 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-400">
+                                <Tag size={16} />
+                                <span className="font-mono font-bold text-sm">{coupon.code}</span>
+                                <span className="text-xs text-green-400/60">Applied</span>
+                            </div>
+                            <button 
+                                onClick={() => { removeCoupon(); setCouponMsg(null); }}
+                                className="text-xs text-white/40 hover:text-white underline"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ) : (
+                        <div>
+                             <div className="flex gap-2">
+                                <input 
+                                    placeholder="Coupon Code" 
+                                    className="flex-1 bg-transparent border border-white/20 p-2 rounded text-sm text-white focus:border-blue-400 outline-none uppercase"
+                                    value={couponInput}
+                                    onChange={e => setCouponInput(e.target.value)}
+                                    disabled={couponLoading}
+                                />
+                                <button 
+                                    onClick={handleApplyCoupon} 
+                                    className="bg-white/10 px-4 rounded hover:bg-white/20 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                                    disabled={couponLoading || !couponInput.trim()}
+                                >
+                                    {couponLoading ? <Loader2 size={16} className="animate-spin"/> : "Apply"}
+                                </button>
+                            </div>
+                            {couponMsg && (
+                                <p className={`text-xs mt-2 ${couponMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                    {couponMsg.text}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
 
-                <div className="flex gap-2 mb-6">
-                    <input 
-                    placeholder="Coupon Code" 
-                    className="flex-1 bg-transparent border border-white/20 p-2 rounded text-sm"
-                    value={couponCode}
-                    onChange={e => setCouponCode(e.target.value)}
-                    />
-                    <button onClick={verifyCoupon} className="bg-white/10 px-4 rounded hover:bg-white/20 text-sm font-bold">Apply</button>
-                </div>
-
                 <div className="flex justify-between text-2xl font-bold mb-8 pt-4 border-t border-white/10">
                     <span>Total</span>
-                    <span>₹{total.toFixed(0)}</span>
+                    <span>₹{cartTotal.finalTotal.toFixed(0)}</span>
                 </div>
 
                 <button 
-    onClick={initiatePayment} 
-    disabled={loading}
-    className="w-full bg-blue-500 py-4 rounded-lg font-bold..."
->
-    {loading ? "Processing..." : "Pay Now"}
-</button>
+                    onClick={initiatePayment} 
+                    disabled={loading || cart.length === 0}
+                    className="w-full bg-blue-500 py-4 rounded-lg font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? "Processing..." : "Pay Now"}
+                </button>
 
                 <p className="text-center text-[#C9D1D9]/40 text-xs mt-4">
                     Secure Payment via Razorpay
@@ -424,6 +462,7 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+      
       {/* ADDRESS SAVE POPUP */}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
