@@ -63,11 +63,14 @@ export async function POST(req: Request) {
     
     let discountAmount = 0;
     if (couponCode) {
-       const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
-       if (coupon && coupon.isActive && new Date() < coupon.expiryDate) {
-          const rawDiscount = (subtotal * coupon.discount) / 100;
-          discountAmount = coupon.maxAmount ? Math.min(rawDiscount, coupon.maxAmount) : rawDiscount;
-       }
+        const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+        const now = new Date();
+        
+        // Check if coupon exists, is active, and is within the start & end dates
+        if (coupon && coupon.isActive && now >= coupon.startDate && now <= coupon.endDate) {
+            // maxAmount was removed from schema, just apply the percentage discount
+            discountAmount = (subtotal * coupon.discount) / 100;
+        }
     }
 
     const shippingAmount = subtotal > 5000 ? 0 : 0;
