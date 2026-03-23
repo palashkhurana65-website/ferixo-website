@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   // CRITICAL: Replace with your actual deployed domain (e.g., https://ferixo.com)
   // This is required for Canonical URLs to work correctly.
-  metadataBase: new URL("https://ferixo.com"), 
+  metadataBase: new URL("https://ferixo.in"), 
 
   // Auto-generate Canonical URL for every page relative to base
   alternates: {
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Ferixo | Premium Hydration Gear",
     description: "Upgrade your daily hydration with Ferixo's cinematic series.",
-    url: "https://ferixo.com",
+    url: "https://ferixo.in",
     siteName: "Ferixo",
     locale: "en_US",
     type: "website",
