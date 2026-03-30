@@ -72,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${montserrat.className} bg-[#0A1A2F] text-[#C9D1D9] antialiased selection:bg-[#C9D1D9] selection:text-[#0A1A2F]`}>
-        {/* WRAP EVERYTHING INSIDE STOREPROVIDER */}
+        {/* WRAP EVERYTHING INSIDE STOREPROVIDeR */}
         <Providers>
         <StoreProvider>
           <Navbar />
