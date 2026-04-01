@@ -7,6 +7,7 @@ import Providers from "@/components/Providers";
 import MarketingPopup from "@/components/ui/Toaster";
 import Toaster from "@/components/ui/Toaster";
 import type { Metadata, Viewport } from "next";
+import { Analytics } from '@vercel/analytics/next';
 
 // 1. Viewport (Mobile Optimization)
 export const viewport: Viewport = {
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Toaster />
         </StoreProvider>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
