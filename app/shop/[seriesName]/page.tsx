@@ -13,11 +13,13 @@ interface PageProps {
 
 export default async function SeriesPage({ params }: PageProps) {
   const resolvedParams = await params;
-  const slug = resolvedParams.seriesName;
+  // Decode the URL just in case there are special characters like %20
+  const slug = decodeURIComponent(resolvedParams.seriesName);
 
   // 1. Find Static Series Info (for Title/Description)
+  // Convert both the Database ID and the URL slug to the same hyphenated format for a perfect match
   const seriesInfo = seriesList.find(
-    (s) => s.id.toLowerCase() === slug.toLowerCase()
+    (s) => s.id.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase().replace(/\s+/g, '-')
   );
 
   if (!seriesInfo) return notFound();
