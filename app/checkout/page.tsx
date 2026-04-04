@@ -26,6 +26,7 @@ export default function CheckoutPage() {
   const [shippingForm, setShippingForm] = useState({
     name: "",
     phone: "",
+    email: "",
     street: "",
     city: "",
     state: "", 
@@ -34,6 +35,7 @@ export default function CheckoutPage() {
 
   const [billingForm, setBillingForm] = useState({
     name: "",
+    email: "", // <--- Add this so the shape matches shippingForm exactly
     phone: "",
     street: "",
     city: "",
@@ -242,6 +244,14 @@ export default function CheckoutPage() {
                         value={shippingForm.name} 
                         onChange={e => setShippingForm({...shippingForm, name: e.target.value})}
                     />
+                    {/* NEW EMAIL FIELD */}
+                <input 
+                    type="email"
+                    placeholder="Email Address (For order updates)" 
+                    className="w-full bg-[#133159] border border-white/10 p-4 rounded focus:outline-none focus:border-blue-400"
+                    value={shippingForm.email} 
+                    onChange={e => setShippingForm({...shippingForm, email: e.target.value})}
+                />
                     <div className="flex bg-[#133159] border border-white/10 rounded overflow-hidden">
                         <span className="p-4 bg-white/5 text-[#C9D1D9] border-r border-white/10 select-none">
                             +91
