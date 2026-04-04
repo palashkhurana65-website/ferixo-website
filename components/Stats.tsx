@@ -12,7 +12,7 @@ export default function Stats() {
   ];
 
   return (
-    // Updated background to match your Shop/Dashboard pages
+    // Updated background to match your Shop/Dashboard pageS
     <section className="py-20 bg-[#0A1A2F] border-y border-white/10">
       <div className="container mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         {stats.map((stat, i) => (
