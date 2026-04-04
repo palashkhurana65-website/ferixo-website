@@ -69,6 +69,7 @@ export async function POST(req: Request) {
         customerEmail: orderUser.email || "guest@ferixo.in",
         totalAmount: updatedOrder.finalAmount,
         items: parsedItems.cart || [],
+        shippingAddress: parsedItems.shippingSnapshot,
       });
     } catch (emailError) {
       console.error("Email send failed, but order was saved:", emailError);

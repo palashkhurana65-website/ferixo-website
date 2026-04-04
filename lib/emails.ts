@@ -1,28 +1,30 @@
 import { Resend } from 'resend';
 
-// Define the shape of your order data
+// Added shippingAddress to the interface
 interface OrderDetails {
   orderId: string;
   customerName: string;
   customerEmail: string;
   totalAmount: number;
   items: any[];
+  shippingAddress?: any; 
 }
 
 export async function sendOrderConfirmations(order: OrderDetails) {
-  // 1. Move initialization INSIDE the function so Vercel can build safely
   if (!process.env.RESEND_API_KEY) {
     console.error("CRITICAL: Resend API key is missing. Emails aborted.");
     return { success: false, error: "Missing API Key" };
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@ferixo.in';
+  
+  // Hardcoding your email here as a fallback just in case the .env variable is missing
+  const adminEmail = process.env.ADMIN_EMAIL || 'palashkhurana65@gmail.com';
 
   try {
-    // 2. Send Email to the Customer
+    // 1. Send Email to the Customer (Unchanged)
     const customerEmailPromise = resend.emails.send({
-      from: 'Ferixo Store <orders@ferixo.in>', // MUST be a verified domain in Resend
+      from: 'Ferixo Store <orders@ferixo.in>', 
       to: order.customerEmail,
       subject: `Order Confirmation - Ferixo #${order.orderId.slice(0, 8).toUpperCase()}`,
       html: `
@@ -46,7 +48,7 @@ export async function sendOrderConfirmations(order: OrderDetails) {
       `,
     });
 
-    // 3. Send Email to You (The Admin)
+    // 2. Send Email to You (The Admin) - NOW WITH SHIPPING DETAILS
     const adminEmailPromise = resend.emails.send({
       from: 'Ferixo System <alerts@ferixo.in>',
       to: adminEmail,
@@ -58,6 +60,16 @@ export async function sendOrderConfirmations(order: OrderDetails) {
           <p><strong>Customer Name:</strong> ${order.customerName}</p>
           <p><strong>Customer Email:</strong> ${order.customerEmail}</p>
           <p><strong>Total Value:</strong> ₹${order.totalAmount.toLocaleString()}</p>
+          
+          ${order.shippingAddress ? `
+          <div style="background-color: #f4f4f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h3 style="margin-top: 0; color: #0A1A2F;">Shipping Details:</h3>
+            <p style="margin: 5px 0;"><strong>Phone:</strong> ${order.shippingAddress.phone || 'N/A'}</p>
+            <p style="margin: 5px 0;"><strong>Address:</strong> ${order.shippingAddress.street}</p>
+            <p style="margin: 5px 0;"><strong>City/State:</strong> ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.pincode}</p>
+          </div>
+          ` : '<p style="color: red;"><em>Shipping details not found in order snapshot.</em></p>'}
+
           <hr />
           <h3>Items Ordered:</h3>
           <ul>
@@ -68,7 +80,6 @@ export async function sendOrderConfirmations(order: OrderDetails) {
       `,
     });
 
-    // Wait for both emails to send
     await Promise.all([customerEmailPromise, adminEmailPromise]);
     
     return { success: true };
