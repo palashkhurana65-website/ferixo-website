@@ -170,7 +170,34 @@ export default function CheckoutPage() {
             description: "Premium Purchase",
             order_id: data.razorpayOrderId,
             handler: async function (response: any) {
-                router.push("/success");
+                try {
+                    setLoading(true); // Keep the button in a loading state
+                    
+                    // 1. Send the payment success data to your backend
+                    const verifyRes = await fetch("/api/checkout/verify", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
+                        }),
+                    });
+
+                    const verifyData = await verifyRes.json();
+
+                    // 2. If backend confirms payment is real, redirect to success
+                    if (verifyData.success) {
+                        router.push(`/success?orderId=${verifyData.orderId}`);
+                    } else {
+                        alert("Payment verification failed. Please contact support.");
+                        setLoading(false);
+                    }
+                } catch (error) {
+                    console.error("Verification error:", error);
+                    alert("An error occurred during verification.");
+                    setLoading(false);
+                }
             },
             prefill: {
                 name: shippingForm.name,
