@@ -1,8 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const adminEmail = process.env.ADMIN_EMAIL || 'admin@ferixo.in';
-
 // Define the shape of your order data
 interface OrderDetails {
   orderId: string;
@@ -13,8 +10,17 @@ interface OrderDetails {
 }
 
 export async function sendOrderConfirmations(order: OrderDetails) {
+  // 1. Move initialization INSIDE the function so Vercel can build safely
+  if (!process.env.RESEND_API_KEY) {
+    console.error("CRITICAL: Resend API key is missing. Emails aborted.");
+    return { success: false, error: "Missing API Key" };
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@ferixo.in';
+
   try {
-    // 1. Send Email to the Customer
+    // 2. Send Email to the Customer
     const customerEmailPromise = resend.emails.send({
       from: 'Ferixo Store <orders@ferixo.in>', // MUST be a verified domain in Resend
       to: order.customerEmail,
@@ -40,7 +46,7 @@ export async function sendOrderConfirmations(order: OrderDetails) {
       `,
     });
 
-    // 2. Send Email to You (The Admin)
+    // 3. Send Email to You (The Admin)
     const adminEmailPromise = resend.emails.send({
       from: 'Ferixo System <alerts@ferixo.in>',
       to: adminEmail,
