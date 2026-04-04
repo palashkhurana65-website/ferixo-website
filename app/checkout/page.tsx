@@ -115,6 +115,7 @@ export default function CheckoutPage() {
     if (
       !shippingForm.name || 
       !shippingForm.phone || 
+      !shippingForm.email ||
       !shippingForm.street || 
       !shippingForm.pincode ||
       !shippingForm.city ||   
@@ -135,7 +136,6 @@ export default function CheckoutPage() {
     setShowSaveModal(false);
     setLoading(true);
 
-    const generatedEmail = `guest_${shippingForm.phone.replace(/\D/g, '')}@ferixo.com`;
     const finalBilling = sameAsShipping ? shippingForm : billingForm;
 
     try {
@@ -144,7 +144,7 @@ export default function CheckoutPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                email: generatedEmail,
+                email: shippingForm.email, // <-- NOW USING THE REAL EMAIL
                 name: shippingForm.name,
                 phone: shippingForm.phone,
                 shippingAddress: { ...shippingForm, country: "India", type: "SHIPPING" },
@@ -173,9 +173,8 @@ export default function CheckoutPage() {
             order_id: data.razorpayOrderId,
             handler: async function (response: any) {
                 try {
-                    setLoading(true); // Keep the button in a loading state
+                    setLoading(true); 
                     
-                    // 1. Send the payment success data to your backend
                     const verifyRes = await fetch("/api/checkout/verify", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -188,7 +187,6 @@ export default function CheckoutPage() {
 
                     const verifyData = await verifyRes.json();
 
-                    // 2. If backend confirms payment is real, redirect to success
                     if (verifyData.success) {
                         router.push(`/success?orderId=${verifyData.orderId}`);
                     } else {
@@ -204,7 +202,7 @@ export default function CheckoutPage() {
             prefill: {
                 name: shippingForm.name,
                 contact: shippingForm.phone,
-                email: generatedEmail,
+                email: shippingForm.email, // <-- NOW USING THE REAL EMAIL FOR RAZORPAY
             },
             theme: { color: "#0A1A2F" }
         };
