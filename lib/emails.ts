@@ -19,7 +19,7 @@ export async function sendOrderConfirmations(order: OrderDetails) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   
   // Hardcoding your email here as a fallback just in case the .env variable is missing
-  const adminEmail = process.env.ADMIN_EMAIL || 'palashkhurana65@gmail.com';
+  const adminEmail = 'palashkhurana65@gmail.com';
 
   try {
     // 1. Send Email to the Customer (Unchanged)

@@ -193,6 +193,23 @@ export default function SignUpPage() {
           </button>
         </form>
 
+        {/* Divider */}
+        <div className="my-6 flex items-center">
+          <div className="flex-grow border-t border-gray-200"></div>
+          <span className="px-4 text-xs text-gray-400 uppercase tracking-wide">Or</span>
+          <div className="flex-grow border-t border-gray-200"></div>
+        </div>
+
+        {/* Google Button */}
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          type="button"
+          className="w-full flex items-center justify-center py-3.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium text-[#0A1A2F]"
+        >
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5 mr-2" alt="Google" />
+          Continue with Google
+        </button>
+
         <p className="mt-8 text-center text-sm text-gray-500">
           Already have an account?{" "}
           <Link href="/sign-in" className="font-bold text-[#0A1A2F] hover:underline">
