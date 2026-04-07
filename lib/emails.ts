@@ -22,15 +22,15 @@ export async function sendOrderConfirmations(order: OrderDetails) {
   const adminEmail = 'palashkhurana65@gmail.com';
 
   try {
-    // 1. Send Email to the Customer (Unchanged)
+    // 1. Send Email to the Customer 
     const customerEmailPromise = resend.emails.send({
       from: 'Ferixo Store <orders@ferixo.in>', 
       to: order.customerEmail,
-      subject: `Order Confirmation - Ferixo #${order.orderId.slice(0, 8).toUpperCase()}`,
+      subject: `Order Confirmation - ${order.orderId}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; color: #333;">
           <h2 style="color: #0A1A2F;">Thank you for your order, ${order.customerName}!</h2>
-          <p>We've received your order and are getting it ready to be shipped. Your order ID is <strong>#${order.orderId.slice(0, 8).toUpperCase()}</strong>.</p>
+          <p>We've received your order and are getting it ready to be shipped. Your order ID is <strong>${order.orderId}</strong>.</p>
           
           <div style="background-color: #f4f4f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Order Summary</h3>

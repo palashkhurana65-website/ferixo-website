@@ -74,24 +74,37 @@ export async function POST(req: Request) {
     }
 
     const shippingAmount = subtotal > 5000 ? 0 : 0;
-
-    // Final Amount = Subtotal + Shipping - Discount 
-    // (We do NOT add taxAmount because subtotal already has it)
     const finalAmount = Math.round(subtotal + shippingAmount - discountAmount);
+
+    // --- NEW: CUSTOM ORDER ID GENERATION ---
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
+
+    // Count how many orders exist this year to determine the next number
+    const yearlyOrderCount = await prisma.order.count({
+      where: {
+        createdAt: {
+          gte: startOfYear,
+        },
+      },
+    });
+
+    // Format: "FER-001-2026"
+    const sequenceString = (yearlyOrderCount + 1).toString().padStart(3, '0');
+    const customOrderId = `FER-${sequenceString}-${currentYear}`;
 
     // 5. Create Order on Razorpay
     const razorpayOrder = await razorpay.orders.create({
       amount: finalAmount * 100,
       currency: "INR",
-      receipt: `rcpt_${Date.now()}`,
+      receipt: customOrderId, // Attach custom ID to Razorpay receipt
     });
 
     // 6. Save Order to Database
     const newOrder = await prisma.order.create({
       data: {
+        id: customOrderId, // <-- OVERRIDES PRISMA'S DEFAULT RANDOM ID
         userId: user.id,
-        // We save a full snapshot of the shipping details in the 'items' JSON
-        // This ensures we never lose the address even if the Address table save failed
         items: {
           cart: cartItems,
           shippingSnapshot: shippingAddress
