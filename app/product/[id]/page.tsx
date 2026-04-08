@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db"; 
 import { notFound } from "next/navigation";
 import ProductView from "@/components/ProductView";
+import React from "react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,5 +44,9 @@ export default async function ProductPage({ params }: PageProps) {
     })) : []
   };
 
-  return <ProductView product={serializableProduct} />;
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#0A1A2F]" />}>
+      <ProductView product={serializableProduct} />
+    </React.Suspense>
+  );
 }
