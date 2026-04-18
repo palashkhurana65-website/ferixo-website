@@ -237,9 +237,28 @@ export default function ProductView({ product }: { product: any }) {
           </span>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4">{product.name}</h1>
-          <div className="flex items-center gap-4 mb-6">
-            <span className="text-3xl font-mono">₹{product.basePrice}</span>
+          
+          {/* --- NEW: PRICE, MRP, AND DISCOUNT BLOCK --- */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
             
+            <div className="flex items-baseline gap-3">
+              <span className="text-3xl font-mono font-bold text-white">₹{product.basePrice}</span>
+              
+              {/* Only show MRP and Discount if MRP exists and is greater than basePrice */}
+              {product.mrp && product.mrp > product.basePrice && (
+                <>
+                  <span className="text-lg font-mono text-white/40 line-through">₹{product.mrp}</span>
+                  <span className="text-xs font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-md border border-green-500/20">
+                    {Math.round(((product.mrp - product.basePrice) / product.mrp) * 100)}% OFF
+                  </span>
+                </>
+              )}
+            </div>
+            
+            {/* Visual Divider (Hidden on very small screens) */}
+            <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
+            
+            {/* REVIEWS */}
             <div className="flex items-center text-yellow-400 text-sm">
               <Star size={16} fill="currentColor" />
               <span className="ml-1 font-bold">

@@ -7,17 +7,16 @@ import {
   Save, 
   X, 
   Image as ImageIcon, 
-  UploadCloud, 
-  Plus, 
   Trash2 
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useStore } from "@/context/StoreContext";
+
+export const dynamic = "force-dynamic";
 
 // --- TYPES ---
-type VariantOption = { name: string; stock: number; images: string[] };
+type VariantOption = { name: string; stock: number; images: string[]; colorCode?: string };
 type VariantGroup = { capacity: string; options: VariantOption[] };
 
 export default function ProductEditor() { 
@@ -39,6 +38,7 @@ export default function ProductEditor() {
     series: "HydroPro",
     description: "",
     basePrice: 0,
+    mrp: 0, // <-- NEW: MRP Field
     stock: 0,
     capacity: "", 
     images: [""], // Main Product Images (Hero)
@@ -47,7 +47,7 @@ export default function ProductEditor() {
 
   // Grouped Variants State (Size -> Colors -> Images)
   const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([
-    { capacity: "", options: [{ name: "", stock: 0, images: [] }] } 
+    { capacity: "", options: [{ name: "", stock: 0, images: [], colorCode: "#133159" }] } // <-- NEW: Default Color
   ]);
 
   // --- 1. DATA FETCHING ---
@@ -71,6 +71,7 @@ export default function ProductEditor() {
         // Populate Basic Info
         setFormData({
             ...data,
+            mrp: data.mrp || 0, // <-- NEW: Map MRP from DB
             images: data.images?.length ? data.images : [""],
             features: data.features?.length ? data.features : [""],
         });
@@ -88,14 +89,14 @@ export default function ProductEditor() {
                 if (Array.isArray(v.images)) {
                     vImages = v.images;
                 } else if (typeof v.images === 'string') {
-                    // Handle legacy or single string cases if any
                     vImages = [v.images];
                 }
 
                 groups[cap].push({ 
                     name: v.name, 
                     stock: v.stock, 
-                    images: vImages
+                    images: vImages,
+                    colorCode: v.colorCode || "#133159" // <-- NEW: Map Color from DB
                 });
             });
 
@@ -105,7 +106,7 @@ export default function ProductEditor() {
                 options
             })));
         } else {
-             setVariantGroups([{ capacity: "", options: [{ name: "", stock: 0, images: [] }] }]);
+             setVariantGroups([{ capacity: "", options: [{ name: "", stock: 0, images: [], colorCode: "#133159" }] }]);
         }
 
       } catch (err: any) {
@@ -138,7 +139,7 @@ export default function ProductEditor() {
 
   // Group Handlers
   const addGroup = () => {
-    setVariantGroups([...variantGroups, { capacity: "", options: [{ name: "", stock: 0, images: [] }] }]);
+    setVariantGroups([...variantGroups, { capacity: "", options: [{ name: "", stock: 0, images: [], colorCode: "#133159" }] }]);
   };
   const removeGroup = (groupIdx: number) => {
     const newGroups = [...variantGroups];
@@ -154,7 +155,7 @@ export default function ProductEditor() {
   // Option (Variant) Handlers
   const addOptionToGroup = (groupIdx: number) => {
     const newGroups = [...variantGroups];
-    newGroups[groupIdx].options.push({ name: "", stock: 0, images: [] });
+    newGroups[groupIdx].options.push({ name: "", stock: 0, images: [], colorCode: "#133159" });
     setVariantGroups(newGroups);
   };
   const removeOption = (groupIdx: number, optIdx: number) => {
@@ -188,7 +189,7 @@ export default function ProductEditor() {
   };
 
   
-// --- 3. SAVE HANDLER (UPDATED) ---
+// --- 3. SAVE HANDLER ---
   const handleSave = async () => {
     // 1. Flatten Groups back to Database Structure
     const flatVariants = variantGroups.flatMap(group => 
@@ -196,12 +197,12 @@ export default function ProductEditor() {
             name: opt.name,
             capacity: group.capacity,
             stock: opt.stock,
-            images: opt.images // Send the array of images
+            images: opt.images,
+            colorCode: opt.colorCode // <-- NEW: Send Color to DB
         }))
     );
 
     // 2. VALIDATION: Check for incomplete variants
-    // Instead of silently filtering, we check if any variant is missing a name
     const incompleteVariant = flatVariants.find(v => !v.name || v.name.trim() === "");
     
     if (incompleteVariant) {
@@ -370,7 +371,7 @@ export default function ProductEditor() {
                 </div>
             </FadeIn>
 
-            {/* 2. Hero Image (Restricted to 1) */}
+            {/* 2. Hero Image */}
             <FadeIn delay={0.1} className="bg-[#133159] p-8 rounded-2xl border border-white/5">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <ImageIcon size={20} className="text-[#C9D1D9]" /> Hero / Cover Image
@@ -439,25 +440,36 @@ export default function ProductEditor() {
         {/* RIGHT COLUMN */}
         <div className="space-y-6">
             
-            {/* 4. Pricing & Stock */}
+            {/* 4. Pricing & Stock (UPDATED WITH MRP) */}
             <FadeIn delay={0.2} className="bg-[#133159] p-6 rounded-2xl border border-white/5 space-y-4">
                 <h2 className="text-lg font-bold text-white">Market Data</h2>
                 
-                <div>
-                    <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">Price (₹)</label>
-                    <input 
-                        type="number" 
-                        className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white font-mono text-lg outline-none"
-                        value={formData.basePrice}
-                        onChange={(e) => setFormData({...formData, basePrice: parseInt(e.target.value)})}
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">Selling Price (₹)</label>
+                        <input 
+                            type="number" 
+                            className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white font-mono text-lg outline-none focus:border-blue-500"
+                            value={formData.basePrice}
+                            onChange={(e) => setFormData({...formData, basePrice: parseInt(e.target.value) || 0})}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">MRP (₹)</label>
+                        <input 
+                            type="number" 
+                            className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white font-mono text-lg outline-none focus:border-blue-500"
+                            value={formData.mrp}
+                            onChange={(e) => setFormData({...formData, mrp: parseInt(e.target.value) || 0})}
+                        />
+                    </div>
                 </div>
                 
-                <div>
+                <div className="pt-2">
                     <label className="block text-xs uppercase tracking-wider text-[#C9D1D9] mb-2 font-bold">Total Stock</label>
                     <input 
                         type="number" 
-                        className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white font-mono text-lg outline-none"
+                        className="w-full bg-[#0A1A2F] border border-white/10 rounded-lg p-3 text-white/50 font-mono text-lg outline-none cursor-not-allowed"
                         value={formData.stock}
                         onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value)})}
                         disabled 
@@ -466,7 +478,7 @@ export default function ProductEditor() {
                 </div>
             </FadeIn>
 
-            {/* 5. GROUPED VARIANTS UI */}
+            {/* 5. GROUPED VARIANTS UI (UPDATED WITH COLOR PICKER) */}
             <FadeIn delay={0.3} className="bg-[#133159] p-6 rounded-2xl border border-white/5">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-lg font-bold text-white">Product Variants</h2>
@@ -505,17 +517,28 @@ export default function ProductEditor() {
                                 {group.options.map((opt, optIdx) => (
                                     <div key={optIdx} className="flex gap-3 items-center mb-2 bg-[#133159] p-3 rounded-lg border border-white/5">
                                         
-                                        {/* Color Name Input */}
-                                        <div className="flex-1">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Color Name (e.g. Navy Blue)"
-                                                className="w-full bg-transparent text-white text-sm font-bold outline-none placeholder-white/20"
-                                                value={opt.name}
-                                                onChange={(e) => handleOptionChange(groupIdx, optIdx, 'name', e.target.value)}
-                                            />
-                                            <div className="text-xs text-blue-400 mt-1">
-                                                {opt.stock} in stock • {opt.images?.length || 0} images
+                                        {/* NEW: Color Name & Hex Input */}
+                                        <div className="flex-1 flex gap-3 items-center">
+                                            {/* Native Color Picker Tool */}
+                                            <div className="flex flex-col items-center justify-center flex-shrink-0" title="Select Hex Color">
+                                                <input 
+                                                    type="color" 
+                                                    className="w-8 h-8 rounded cursor-pointer bg-[#0A1A2F] border-0 outline-none"
+                                                    value={opt.colorCode || "#133159"}
+                                                    onChange={(e) => handleOptionChange(groupIdx, optIdx, 'colorCode', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Color Name (e.g. Navy Blue)"
+                                                    className="w-full bg-transparent text-white text-sm font-bold outline-none placeholder-white/20"
+                                                    value={opt.name}
+                                                    onChange={(e) => handleOptionChange(groupIdx, optIdx, 'name', e.target.value)}
+                                                />
+                                                <div className="text-xs text-blue-400 mt-1">
+                                                    {opt.stock} in stock • {opt.images?.length || 0} images
+                                                </div>
                                             </div>
                                         </div>
 

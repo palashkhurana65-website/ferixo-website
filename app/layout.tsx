@@ -1,4 +1,5 @@
 import { Montserrat } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -7,6 +8,7 @@ import Providers from "@/components/Providers";
 import MarketingPopup from "@/components/ui/Toaster";
 import Toaster from "@/components/ui/Toaster";
 import type { Metadata, Viewport } from "next";
+import MetaPixel from "@/components/MetaPixel";
 
 // 1. Viewport (Mobile Optimization)
 export const viewport: Viewport = {
@@ -71,6 +73,9 @@ const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "500", "600"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth">
+      <Suspense fallback={null}>
+          <MetaPixel />
+        </Suspense>
       <body className={`${montserrat.className} bg-[#0A1A2F] text-[#C9D1D9] antialiased selection:bg-[#C9D1D9] selection:text-[#0A1A2F]`}>
         {/* WRAP EVERYTHING INSIDE STOREPROVIDeR */}
         <Providers>

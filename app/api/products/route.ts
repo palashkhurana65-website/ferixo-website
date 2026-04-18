@@ -34,10 +34,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { 
-      name, series, description, basePrice, stock, capacity, 
-      images,    // Received as: ["url1", "url2"]
-      features,  // Received as: ["feat1", "feat2"]
-      variants   // Received as: [{ name, stock, capacity }]
+      name, series, description, basePrice, mrp, stock, capacity, // <-- Extracted mrp
+      images,    
+      features,  
+      variants   
     } = body;
 
     const product = await prisma.product.create({
@@ -46,9 +46,9 @@ export async function POST(req: Request) {
         series,
         description,
         basePrice: Number(basePrice),
+        mrp: mrp ? Number(mrp) : null, // <-- SAVES MRP
         stock: Number(stock),
         capacity,
-        // MAGIC: Transform simple arrays into Database Relations
         images: {
           create: images.map((url: string) => ({ url }))
         },
@@ -59,7 +59,9 @@ export async function POST(req: Request) {
           create: variants.map((v: any) => ({
             name: v.name,
             capacity: v.capacity,
-            stock: Number(v.stock)
+            stock: Number(v.stock),
+            images: v.images || [], // <-- Fixed missing variant images
+            colorCode: v.colorCode || null // <-- SAVES COLOR CODE
           }))
         }
       },

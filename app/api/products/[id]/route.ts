@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db"; // FIX: Use the singleton instance
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 // Helper for Admin Check
 async function checkAdmin() {
   const session = await getServerSession(authOptions);
@@ -85,6 +87,7 @@ export async function PUT(
           series: basicInfo.series,
           description: basicInfo.description,
           basePrice: Number(basicInfo.basePrice),
+          mrp: basicInfo.mrp ? Number(basicInfo.mrp) : null, // <-- SAVES MRP
           stock: Number(basicInfo.stock),
           capacity: basicInfo.capacity,
           images: {
@@ -98,7 +101,8 @@ export async function PUT(
                 name: v.name,
                 capacity: v.capacity,
                 stock: Number(v.stock),
-                images: v.images || []
+                images: v.images || [],
+                colorCode: v.colorCode || null // <-- SAVES COLOR CODE
              }))
           }
         }
