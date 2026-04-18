@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'; // Ensure this points to your DB instance
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // REPLACE with your actual domain
-  const baseUrl = 'https://ferixo.com'; 
+  const baseUrl = 'https://ferixo.in'; 
 
   // 1. Fetch All Products from Database
   // We grab the ID and updated date to tell Google when content changed

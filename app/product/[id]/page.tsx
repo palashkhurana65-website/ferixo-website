@@ -7,6 +7,47 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+import { Metadata } from "next";
+
+// ... your existing imports and `export const dynamic = "force-dynamic";`
+
+// --- NEW: DYNAMIC SEO METADATA ---
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  
+  const product = await prisma.product.findUnique({
+    where: { id: resolvedParams.id },
+    include: { images: true }
+  });
+
+  if (!product) {
+    return { title: 'Product Not Found | Ferixo' };
+  }
+
+  return {
+    title: `${product.name} | Ferixo Premium Gear`,
+    description: product.description.substring(0, 160), // Google prefers ~160 characters
+    openGraph: {
+      title: `${product.name} | Ferixo`,
+      description: product.description.substring(0, 160),
+      images: [
+        {
+          url: product.images[0]?.url || '/placeholder.jpg',
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${product.name} | Ferixo`,
+      description: product.description.substring(0, 160),
+      images: [product.images[0]?.url || '/placeholder.jpg'],
+    },
+  };
+}
+
 export default async function ProductPage({ params }: PageProps) {
   const resolvedParams = await params;
   
