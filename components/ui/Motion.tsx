@@ -1,8 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ReactNode } from "react";
-import { cn } from "@/lib/utils"; // Assumes standard clsx utility
 
 interface FadeProps {
   children: ReactNode;
@@ -12,6 +11,11 @@ interface FadeProps {
 }
 
 export function FadeIn({ children, className, delay = 0, direction = "up" }: FadeProps) {
+  const prefersReducedMotion = useReducedMotion();
+  if (prefersReducedMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       initial={{ 
@@ -36,6 +40,11 @@ export function FadeIn({ children, className, delay = 0, direction = "up" }: Fad
 }
 
 export function HoverCard({ children, className }: { children: ReactNode; className?: string }) {
+  const prefersReducedMotion = useReducedMotion();
+  if (prefersReducedMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}

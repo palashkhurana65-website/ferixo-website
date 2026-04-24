@@ -5,7 +5,7 @@ import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
 import { prisma } from "@/lib/db"; 
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30; // Revalidates the cache every 30 seconds
 
 // [NEW] Manual Image Mapping: Add your image paths here matching the Series ID
 const SERIES_IMAGES: Record<string, string> = {

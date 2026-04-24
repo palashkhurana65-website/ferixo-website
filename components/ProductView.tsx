@@ -236,7 +236,7 @@ export default function ProductView({ product }: { product: any }) {
             {product.series} Collection
           </span>
 
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">{product.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold mb-4">{product.name}</h1>
           
           {/* --- NEW: PRICE, MRP, AND DISCOUNT BLOCK --- */}
           <div className="flex flex-wrap items-center gap-4 mb-6">

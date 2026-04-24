@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ShoppingBag, Search, User, Menu, X, ChevronRight } from "lucide-react";
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -13,15 +13,37 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { scrollY } = useScroll();
   const pathname = usePathname();
+  const lastScrolledRef = useRef(false);
 
   // Temporary: Change this to false to test "Guest" view once we have Auth
   const { data: session } = useSession(); 
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 50);
-  });
+  useEffect(() => {
+    let ticking = false;
+    const threshold = 50;
+
+    const updateScrollState = () => {
+      const nextScrolled = window.scrollY > threshold;
+      if (nextScrolled !== lastScrolledRef.current) {
+        lastScrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(updateScrollState);
+      }
+    };
+
+    // Set initial state once without waiting for user scroll.
+    updateScrollState();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   if (pathname.startsWith("/admin")) return null;
 
